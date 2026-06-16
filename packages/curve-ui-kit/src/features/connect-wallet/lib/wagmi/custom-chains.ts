@@ -10,9 +10,9 @@
  */
 import { chainConfig } from 'viem/op-stack'
 import { defineChain } from 'viem/utils'
+import { RPC } from '@primitives/rpc'
 import { Chain as ChainId } from '@ui-kit/utils/network'
 import { mainnet } from '@wagmi/core/chains'
-import { RPC } from './rpc'
 
 export const ethereum = defineChain({
   ...mainnet,

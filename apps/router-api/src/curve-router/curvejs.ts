@@ -1,5 +1,6 @@
 import { type default as curveApi, createCurve } from '@curvefi/api'
 import type { RouterLogger } from '../logger'
+import type { RouterApiEnv } from '../runtime-env'
 import { resolveRpc } from './network-metadata'
 
 export type CurveJS = typeof curveApi
@@ -49,10 +50,10 @@ async function fetchPools(curve: CurveJS, log: RouterLogger) {
  * Get a Curve.js instance for a specific chain ID, initializing it if necessary.
  * The instance is cached for future use. Automatically fetches and refreshes pool data.
  */
-export const loadCurve = (chainId: number, log: RouterLogger) => {
+export const loadCurve = (chainId: number, log: RouterLogger, env: RouterApiEnv) => {
   instances[chainId] ??= (async () => {
     const curve = createCurve()
-    const { url } = await resolveRpc(chainId, curve)
+    const { url } = await resolveRpc(chainId, curve, env)
     await curve.init('JsonRpc', { url }, { chainId })
     await fetchPools(curve, log)
     return curve

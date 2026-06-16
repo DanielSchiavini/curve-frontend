@@ -8,6 +8,7 @@ import type { RouterRouteResponse, RouteStep, TransactionData } from '@primitive
 import type { RouterLogger } from '../logger'
 import { fromWei, toWei } from '../router.utils'
 import { type RoutesQuery } from '../routes/routes.schemas'
+import type { RouterApiEnv } from '../runtime-env'
 import { type CurveJS, loadCurve } from './curvejs'
 
 /**
@@ -67,7 +68,11 @@ const getDecimals = (tokens: Address[], decimals: IDict<number>) =>
 /**
  * Runs the router to get the optimal route and builds the response.
  */
-export async function buildCurveRouteResponse(query: RoutesQuery, log: RouterLogger): Promise<RouterRouteResponse[]> {
+export async function buildCurveRouteResponse(
+  query: RoutesQuery,
+  log: RouterLogger,
+  env: RouterApiEnv,
+): Promise<RouterRouteResponse[]> {
   const {
     tokenOut: [toToken],
     tokenIn: [fromToken],
@@ -77,7 +82,7 @@ export async function buildCurveRouteResponse(query: RoutesQuery, log: RouterLog
     slippage,
   } = query
 
-  const curve = await loadCurve(chainId, log)
+  const curve = await loadCurve(chainId, log, env)
   const [fromDecimals, toDecimals] = getDecimals([fromToken, toToken], curve.getNetworkConstants().DECIMALS)
 
   const outAmount = fromWei(amountOut ?? '0', toDecimals)

@@ -4,8 +4,7 @@ import type { Decimal } from '@primitives/decimal.utils'
 import type { RouterRouteResponse, TransactionData } from '@primitives/router.utils'
 import type { RouterLogger } from '../logger'
 import { type RoutesQuery } from '../routes/routes.schemas'
-
-const { ENSO_API_URL = 'https://api.enso.finance', ENSO_API_KEY } = process.env
+import type { RouterApiEnv } from '../runtime-env'
 
 type EnsoRouteResponse = {
   gas: string
@@ -33,7 +32,12 @@ type EnsoRouteResponse = {
 /**
  * Calls Enso's router to get the optimal route and builds the response.
  */
-export const buildEnsoRouteResponse = async (query: RoutesQuery, log: RouterLogger): Promise<RouterRouteResponse[]> => {
+export const buildEnsoRouteResponse = async (
+  query: RoutesQuery,
+  log: RouterLogger,
+  env: RouterApiEnv,
+): Promise<RouterRouteResponse[]> => {
+  const { ENSO_API_URL = 'https://api.enso.finance', ENSO_API_KEY } = env
   const {
     chainId,
     tokenIn: [tokenIn],

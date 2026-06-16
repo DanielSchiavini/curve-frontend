@@ -6,6 +6,7 @@ import { buildEnsoRouteResponse } from '../enso-router/enso-router'
 import type { RouterLogger } from '../logger'
 import { buildOdosRouteResponse } from '../odos-router/odos-router'
 import { decimalCompare, decimalMax } from '../router.utils'
+import type { RouterApiEnv } from '../runtime-env'
 import { type RoutesQuery } from './routes.schemas'
 
 const ROUTE_TIMEOUT = 30_000 // 30 seconds
@@ -19,14 +20,14 @@ const sortRoutes = (a: RouterRouteResponse, b: RouterRouteResponse) =>
 /**
  * Handles the routes request. Returns the best routes for the given parameters.
  */
-export const getRoutes = async (request: { query: RoutesQuery; log: RouterLogger }) => {
+export const getRoutes = async (request: { env: RouterApiEnv; query: RoutesQuery; log: RouterLogger }) => {
   const query = request.query
   const { router = ['curve'] } = query
 
   const results = await Promise.allSettled(
     router.map(router =>
       handleTimeout(
-        routers[router](query, request.log),
+        routers[router](query, request.log, request.env),
         ROUTE_TIMEOUT,
         `Route calculation for provider ${router} timed out`,
       ),

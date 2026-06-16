@@ -25,4 +25,20 @@ describe('health endpoint', () => {
     expect(payload.timestamp).not.toHaveLength(0)
     expect(payload.uptime).toBeGreaterThanOrEqual(0)
   })
+
+  it('reads service metadata from runtime bindings', async () => {
+    const response = await app.request('/api/health', undefined, {
+      SERVICE_NAME: 'router-api-test-binding',
+      NODE_ENV: 'preview',
+      npm_package_version: '1.2.3',
+    })
+    expect(response.status).toBe(200)
+
+    expect(await response.json()).toMatchObject({
+      status: 'ok',
+      service: 'router-api-test-binding',
+      environment: 'preview',
+      version: '1.2.3',
+    })
+  })
 })

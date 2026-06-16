@@ -4,6 +4,7 @@ import { RouteProviders } from '@primitives/router.utils'
 import { logger } from './logger'
 import { getRoutes } from './routes/routes'
 import { ADDRESS_HEX_PATTERN, RoutesPath, type RoutesQuery } from './routes/routes.schemas'
+import type { RouterApiEnv } from './runtime-env'
 
 const ADDRESS_REGEX = new RegExp(ADDRESS_HEX_PATTERN)
 const WEI_AMOUNT_REGEX = /^\d+$/
@@ -35,11 +36,11 @@ const querySchema = z
   })
   .strict()
 
-const health = () => ({
+const health = (env: RouterApiEnv) => ({
   status: 'ok',
-  service: process.env.SERVICE_NAME || 'router-api',
-  environment: process.env.NODE_ENV || 'production',
-  version: process.env.npm_package_version || '0.0.1',
+  service: env.SERVICE_NAME || 'router-api',
+  environment: env.NODE_ENV || 'production',
+  version: env.npm_package_version || '0.0.1',
   uptime: process.uptime(),
   timestamp: new Date().toISOString(),
 })
@@ -76,20 +77,21 @@ const jsonResponse = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json; charset=UTF-8' },
   })
 
-export const app = new Hono()
+export const app = new Hono<{ Bindings: RouterApiEnv }>()
 
-app.get('/health', () => jsonResponse(health()))
-app.get('/api/health', () => jsonResponse(health()))
+app.get('/health', c => jsonResponse(health({ ...process.env, ...c.env })))
+app.get('/api/health', c => jsonResponse(health({ ...process.env, ...c.env })))
 
-app.get(RoutesPath, async ({ req }) => {
+app.get(RoutesPath, async ({ env: bindings, req }) => {
   const start = Date.now()
+  const env: RouterApiEnv = { ...process.env, ...bindings }
   const { method, path } = req
   const { data, error, success } = querySchema.safeParse(req.queries())
 
   if (!success) return jsonResponse(validationError(error), 400)
 
   try {
-    const routes = await getRoutes({ query: data as RoutesQuery, log: logger })
+    const routes = await getRoutes({ env, query: data as RoutesQuery, log: logger })
     logger.info({
       message: 'router-api request finished',
       method,
