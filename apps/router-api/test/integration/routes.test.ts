@@ -1,10 +1,9 @@
-import type { FastifyInstance } from 'fastify'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import type { PartialRecord } from '@primitives/objects.utils'
 import type { RouteProvider, RouterRouteResponse } from '@primitives/router.utils'
+import { app } from '../../src/app'
 import { toWei } from '../../src/router.utils'
 import { ADDRESS_HEX_PATTERN, type RoutesQuery } from '../../src/routes/routes.schemas'
-import { createRouterApiServer } from '../../src/server'
 
 process.loadEnvFile()
 
@@ -26,6 +25,33 @@ type QueryString = { [P in keyof RoutesQuery]?: string | string[] }
 type SuccessCase = { query: QueryString; expectedRoutes?: number }
 type ErrorResponse = { statusCode: number; code: string; error: string; message: string }
 type FailureCase = { query: Partial<QueryString>; expectedResponse: ErrorResponse }
+
+const requestRoutes = (query: Partial<QueryString>) => {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach(item => searchParams.append(key, item))
+    } else if (value != null) {
+      searchParams.append(key, value)
+    }
+  })
+
+  return app.request(`/api/router/v1/routes?${searchParams}`)
+}
+
+const responseBody = async (response: Response) => {
+  const body = await response.clone().text()
+  try {
+    return JSON.stringify(JSON.parse(body), null, 2)
+  } catch {
+    return body
+  }
+}
+
+const expectStatus = async (response: Response, expectedStatus: number) => {
+  expect(response.status, await responseBody(response)).toBe(expectedStatus)
+}
 
 /**
  * Success cases per provider. Curve supports amountIn and amountOut; Enso and Odos require amountIn.
@@ -161,20 +187,13 @@ const failureCases: Record<string, FailureCase> = {
 }
 
 describe('GET routes integration', () => {
-  let server: FastifyInstance
-  beforeAll(() => (server = createRouterApiServer()))
-  afterAll(() => server.close())
-
   Object.entries(successCasesByProvider).forEach(([router, cases]) => {
     Object.entries(cases).forEach(([label, { query, expectedRoutes = 1 }]) => {
       it(`returns a valid route for ${router} - ${label}`, async () => {
-        const { json, statusCode } = await server.inject({
-          url: '/api/router/v1/routes',
-          query: { ...query, router },
-        })
-        expect(statusCode).toBe(200)
+        const response = await requestRoutes({ ...query, router })
+        await expectStatus(response, 200)
 
-        const payload = json<RouterRouteResponse[]>()
+        const payload = (await response.json()) as RouterRouteResponse[]
         expect(payload).toHaveLength(expectedRoutes)
         payload.forEach(route => {
           expect(route.router).toBe(router)
@@ -204,9 +223,13 @@ describe('GET routes integration', () => {
 
   Object.entries(failureCases).forEach(([label, { query, expectedResponse }]) => {
     it(`returns validation error for ${label}`, async () => {
-      const { statusCode, json } = await server.inject({ url: '/api/router/v1/routes', query })
-      expect(statusCode).toBe(expectedResponse.statusCode)
-      expect(json()).toMatchObject(expectedResponse)
+      const response = await requestRoutes(query)
+      await expectStatus(response, expectedResponse.statusCode)
+      expect(await response.json()).toMatchObject({
+        statusCode: expectedResponse.statusCode,
+        code: expectedResponse.code,
+        error: expectedResponse.error,
+      })
     })
   })
 })

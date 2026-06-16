@@ -1,46 +1,47 @@
-import type { FastifyListenOptions } from 'fastify'
-import { createRouterApiServer } from './server'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { app } from './app'
+import { logger } from './logger'
 
 process.loadEnvFile()
 
-const loadConfigFromEnv = ({ HOST, PORT = 3010 } = process.env): FastifyListenOptions => ({
-  port: Number(PORT),
-  host: HOST,
+const { HOST = '127.0.0.1', PORT = 3010 } = process.env
+
+const server = createServer((request, response) => {
+  void handleRequest(request, response)
 })
 
-/**
- * Starts the Fastify server and sets up graceful shutdown handlers.
- * This function is invoked when running the application locally.
- * On Vercel, we use the server instance directly in the API route handler of the main app.
- */
-async function start(): Promise<void> {
-  const server = createRouterApiServer()
-
-  const stopServer = (signal: NodeJS.Signals) => {
-    server.log.info({ signal }, 'Received shutdown signal. Closing server.')
-    server.close().then(
-      () => {
-        server.log.info('Server closed successfully.')
-        process.exit(0)
-      },
-      error => {
-        server.log.error({ err: error }, 'Error during server shutdown.')
-        process.exit(1)
-      },
-    )
+const handleRequest = async (request: IncomingMessage, response: ServerResponse) => {
+  if (!request.url) {
+    response.writeHead(400)
+    response.end('Missing request URL')
+    return
   }
+  const url = `http://${request.headers.host ?? `${HOST}:${PORT}`}${request.url}`
+  const honoResponse = await app.fetch(
+    new Request(url, { method: request.method, headers: request.headers as HeadersInit }),
+  )
 
-  process.on('SIGINT', stopServer)
-  process.on('SIGTERM', stopServer)
-
-  try {
-    const address = await server.listen(loadConfigFromEnv())
-    server.log.info({ address }, 'Router API server ready')
-  } catch (error) {
-    server.log.error({ err: error }, 'Failed to start Router API server.')
-    process.exit(1)
-  }
+  response.writeHead(honoResponse.status, Object.fromEntries(honoResponse.headers))
+  response.end(await honoResponse.text())
 }
 
-// Kick off the bootstrap process.
-void start()
+const stopServer = (signal: NodeJS.Signals) => {
+  logger.info({ signal }, 'Received shutdown signal. Closing server.')
+  server.close(error => {
+    if (error) {
+      logger.error({ err: error }, 'Error during server shutdown.')
+      process.exit(1)
+    }
+
+    logger.info('Server closed successfully.')
+    process.exit(0)
+  })
+}
+
+process.on('SIGINT', stopServer)
+process.on('SIGTERM', stopServer)
+
+server.listen(Number(PORT), HOST, () => {
+  const address = server.address()
+  logger.info({ address }, 'Router API server ready')
+})

@@ -1,8 +1,8 @@
-import { FastifyBaseLogger } from 'fastify'
 import { Address } from 'viem'
 import { toArray } from '@primitives/array.utils'
 import type { Decimal } from '@primitives/decimal.utils'
 import type { RouterRouteResponse, TransactionData } from '@primitives/router.utils'
+import type { RouterLogger } from '../logger'
 import { type RoutesQuery } from '../routes/routes.schemas'
 
 const { ENSO_API_URL = 'https://api.enso.finance', ENSO_API_KEY } = process.env
@@ -33,10 +33,7 @@ type EnsoRouteResponse = {
 /**
  * Calls Enso's router to get the optimal route and builds the response.
  */
-export const buildEnsoRouteResponse = async (
-  query: RoutesQuery,
-  log: FastifyBaseLogger,
-): Promise<RouterRouteResponse[]> => {
+export const buildEnsoRouteResponse = async (query: RoutesQuery, log: RouterLogger): Promise<RouterRouteResponse[]> => {
   const {
     chainId,
     tokenIn: [tokenIn],

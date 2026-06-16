@@ -1,11 +1,11 @@
 import { BigNumber } from 'bignumber.js'
-import { FastifyBaseLogger } from 'fastify'
 import { Address, zeroAddress } from 'viem'
 import type { IDict, IRoute, IRouteStep } from '@curvefi/api/lib/interfaces'
 import { PoolTemplate } from '@curvefi/api/lib/pools'
 import type { Decimal } from '@primitives/decimal.utils'
 import { DEFAULT_DECIMALS, notFalsy } from '@primitives/objects.utils'
 import type { RouterRouteResponse, RouteStep, TransactionData } from '@primitives/router.utils'
+import type { RouterLogger } from '../logger'
 import { fromWei, toWei } from '../router.utils'
 import { type RoutesQuery } from '../routes/routes.schemas'
 import { type CurveJS, loadCurve } from './curvejs'
@@ -14,7 +14,7 @@ import { type CurveJS, loadCurve } from './curvejs'
  * Returns an array of tuples containing the route step and the corresponding pool object (or undefined if not found).
  * If a pool is not found, it logs the missing poolId to the log.
  */
-const tryGetPools = (routes: IRouteStep[], curve: CurveJS, log: FastifyBaseLogger) =>
+const tryGetPools = (routes: IRouteStep[], curve: CurveJS, log: RouterLogger) =>
   routes.map((route): [IRouteStep, PoolTemplate | undefined] => {
     try {
       return [route, curve.getPool(route.poolId)]
@@ -67,10 +67,7 @@ const getDecimals = (tokens: Address[], decimals: IDict<number>) =>
 /**
  * Runs the router to get the optimal route and builds the response.
  */
-export async function buildCurveRouteResponse(
-  query: RoutesQuery,
-  log: FastifyBaseLogger,
-): Promise<RouterRouteResponse[]> {
+export async function buildCurveRouteResponse(query: RoutesQuery, log: RouterLogger): Promise<RouterRouteResponse[]> {
   const {
     tokenOut: [toToken],
     tokenIn: [fromToken],

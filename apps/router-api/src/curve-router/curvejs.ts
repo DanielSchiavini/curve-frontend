@@ -1,5 +1,5 @@
-import { FastifyBaseLogger } from 'fastify'
 import { type default as curveApi, createCurve } from '@curvefi/api'
+import type { RouterLogger } from '../logger'
 import { resolveRpc } from './network-metadata'
 
 export type CurveJS = typeof curveApi
@@ -17,11 +17,13 @@ const FACTORIES = [
 ] as const
 
 const ONE_MINUTE = 60000
+// Node timers expose unref() so local dev/tests can exit; CF workers do not.
+type RefreshTimer = ReturnType<typeof setTimeout> & { unref?: () => void }
 
 /**
  * Fetch pools from all Curve factories and set up periodic refresh for a given CurveJS instance.
  */
-async function fetchPools(curve: CurveJS, log: FastifyBaseLogger) {
+async function fetchPools(curve: CurveJS, log: RouterLogger) {
   const factories = FACTORIES.map(key => curve[key])
   const fetchAllPools = async ({ initial = false }: { initial?: boolean } = {}) => {
     try {
@@ -31,12 +33,12 @@ async function fetchPools(curve: CurveJS, log: FastifyBaseLogger) {
           if ('fetchNewPools' in factory) await factory.fetchNewPools()
         }),
       )
-    } catch (e) {
+    } catch (e: unknown) {
       log.error({ message: 'Error fetching pools', error: e, chainId: curve.chainId })
       if (initial) throw e // make sure the request fails if fetching pools fails
     } finally {
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises -- Existing violation before enabling this rule.
-      setTimeout(fetchAllPools, ONE_MINUTE).unref() // refresh every minute, unref to avoid keeping the event loop alive
+      const refreshTimer: RefreshTimer = setTimeout(() => void fetchAllPools(), ONE_MINUTE)
+      refreshTimer.unref?.()
     }
   }
   await fetchAllPools({ initial: true })
@@ -47,7 +49,7 @@ async function fetchPools(curve: CurveJS, log: FastifyBaseLogger) {
  * Get a Curve.js instance for a specific chain ID, initializing it if necessary.
  * The instance is cached for future use. Automatically fetches and refreshes pool data.
  */
-export const loadCurve = (chainId: number, log: FastifyBaseLogger) => {
+export const loadCurve = (chainId: number, log: RouterLogger) => {
   instances[chainId] ??= (async () => {
     const curve = createCurve()
     const { url } = await resolveRpc(chainId, curve)

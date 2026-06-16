@@ -1,9 +1,9 @@
-import type { FastifyRequest } from 'fastify'
 import lodash from 'lodash'
 import { handleTimeout } from '@primitives/objects.utils'
 import { type RouterRouteResponse } from '@primitives/router.utils'
 import { buildCurveRouteResponse } from '../curve-router/curve-router'
 import { buildEnsoRouteResponse } from '../enso-router/enso-router'
+import type { RouterLogger } from '../logger'
 import { buildOdosRouteResponse } from '../odos-router/odos-router'
 import { decimalCompare, decimalMax } from '../router.utils'
 import { type RoutesQuery } from './routes.schemas'
@@ -19,7 +19,7 @@ const sortRoutes = (a: RouterRouteResponse, b: RouterRouteResponse) =>
 /**
  * Handles the routes request. Returns the best routes for the given parameters.
  */
-export const getRoutes = async (request: FastifyRequest<{ Querystring: RoutesQuery }>) => {
+export const getRoutes = async (request: { query: RoutesQuery; log: RouterLogger }) => {
   const query = request.query
   const { router = ['curve'] } = query
 
@@ -37,7 +37,7 @@ export const getRoutes = async (request: FastifyRequest<{ Querystring: RoutesQue
     (res): res is PromiseFulfilledResult<RouterRouteResponse[]> => res.status === 'fulfilled',
   )
 
-  failures.forEach(res => request.log.error({ message: 'route calculation failed', error: res.reason }))
+  failures.forEach(res => request.log.error({ message: 'route calculation failed', error: res.reason as unknown }))
   if (!successes.length) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- Existing violation before enabling this rule.
     const reasons = failures.map(f => f.reason)
