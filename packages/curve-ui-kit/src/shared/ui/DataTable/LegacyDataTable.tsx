@@ -1,5 +1,5 @@
 /// <reference types="./DataTable.d.ts" />
-import { type ReactNode, type RefObject, useEffect, useEffectEvent, useMemo, useRef } from 'react'
+import { type ReactNode, useEffect, useEffectEvent, useMemo, useRef } from 'react'
 import Box from '@mui/material/Box'
 import { Theme } from '@mui/material/styles'
 import Table from '@mui/material/Table'
@@ -15,37 +15,13 @@ import { TablePagination } from '@ui-kit/shared/ui/DataTable/TablePagination'
 import { WithWrapper } from '@ui-kit/shared/ui/WithWrapper'
 import { SizesAndSpaces } from '@ui-kit/themes/design/1_sizes_spaces'
 import { DataTableHeaderHeight, type DataTableSize, type TableItem, type TanstackTable } from './data-table.utils'
-import { DataRow, type DataRowProps } from './DataRow'
 import { HeaderCell } from './HeaderCell'
+import { useScrollToTopOnFilterChange, useScrollToTopOnPageChange } from './hooks/useTableScroll'
+import { LegacyDataRow, LegacyDataRowProps } from './LegacyDataRow'
 import { LegacyFilterRow } from './LegacyFilterRow'
 import { SkeletonRows } from './SkeletonRows'
 import { TableViewAllCell } from './TableViewAllCell'
 import { useTableRowLimit } from './useTableRowLimit'
-
-/**
- * Scrolls to the top of the window whenever the column filters change.
- */
-function useScrollToTopOnFilterChange<T extends TableItem>(table: TanstackTable<T>) {
-  const { columnFilters } = table.getState()
-  useEffect(() => {
-    if (columnFilters.length) {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [columnFilters])
-}
-
-/**
- * Scrolls to the top of the table container whenever the page changes with manual pagination.
- */
-function useScrollToTopOnPageChange<T extends TableItem>(
-  table: TanstackTable<T>,
-  containerRef: RefObject<HTMLElement | null>,
-) {
-  const { pageIndex } = table.getState().pagination
-  useEffect(() => {
-    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [pageIndex, containerRef])
-}
 
 /**
  * Resets the table pagination to the first page whenever the number of filtered results changes.
@@ -57,10 +33,13 @@ function useResetPageOnResultChange<T extends TableItem>(table: TanstackTable<T>
   const onPaginationChangeEvent = useEffectEvent(table.setPagination)
   const lastResultCountRef = useRef<number>(resultCount)
   useEffect(() => {
-    // Skip for manual pagination - data is expected to change on page change
-    if (isManualPagination) return
-    // Reset to first page, but only if result amount wasn't 0 (links must keep working while data might still be loading)
-    if (lastResultCountRef.current && resultCount) onPaginationChangeEvent(prev => ({ ...prev, pageIndex: 0 }))
+    const last = resultCount && lastResultCountRef.current
+    if (
+      !isManualPagination && // Skip for manual pagination - data is expected to change on page change
+      last && // when 0 don't reset the page, data might be loading
+      resultCount !== last // // in strict mode the effect can trigger even when the count didn't change
+    )
+      onPaginationChangeEvent(prev => ({ ...prev, pageIndex: 0 }))
     lastResultCountRef.current = resultCount
   }, [resultCount, isManualPagination])
 }
@@ -95,7 +74,7 @@ export const LegacyDataTable = <T extends TableItem>({
   disableStickyHeader?: boolean
   hideHeader?: boolean
   footerRow?: ReactNode
-} & Omit<DataRowProps<T>, 'row' | 'isLastRow' | 'shouldStickLastRowToTop'>) => {
+} & Omit<LegacyDataRowProps<T>, 'row' | 'isLastRow' | 'shouldStickLastRowToTop'>) => {
   const { table } = rowProps
   const { rows } = table.getRowModel()
   const { isLimited, isLoading: isLoadingViewAll, onShowAll } = useTableRowLimit(rowLimit, rows.length)
@@ -108,10 +87,10 @@ export const LegacyDataTable = <T extends TableItem>({
   const headerGroups = table.getHeaderGroups()
   const columnCount = useMemo(() => headerGroups.reduce((acc, group) => acc + group.headers.length, 0), [headerGroups])
   const top = useLayoutStore(state => state.navHeight)
-  const containerRef = useRef<HTMLDivElement>(null)
-  useScrollToTopOnFilterChange(table)
+  const tableTopRef = useRef<HTMLTableElement>(null)
+  useScrollToTopOnFilterChange({ table, tableTopRef })
   useResetPageOnResultChange(table)
-  useScrollToTopOnPageChange(table, containerRef)
+  useScrollToTopOnPageChange({ table, tableTopRef })
   const tableHeaderSx = (t: Theme) => ({
     ...(!disableStickyHeader && {
       position: 'sticky',
@@ -125,13 +104,16 @@ export const LegacyDataTable = <T extends TableItem>({
   const showFooter = showPagination || showViewAllButton || footerRow
 
   return (
-    <WithWrapper Wrapper={Box} shouldWrap={maxHeight} sx={{ maxHeight, overflowY: 'auto' }} ref={containerRef}>
+    <WithWrapper Wrapper={Box} shouldWrap={maxHeight} sx={{ maxHeight, overflowY: 'auto' }}>
       <Table
+        ref={tableTopRef}
         sx={{
           backgroundColor: t => t.design.Layer[1].Fill,
           borderCollapse: 'separate' /* Don't collapse to avoid funky stuff with the sticky header */,
           // Prevent a long content of a column to push the other column outside the viewport
           ...(useIsMobile() && { tableLayout: 'fixed' }),
+          // affects where the scrollIntoView stops, avoiding to be covered by the sticky nav
+          scrollMarginTop: `${top}px`,
         }}
         data-testid={!loading && 'data-table'}
       >
@@ -161,7 +143,7 @@ export const LegacyDataTable = <T extends TableItem>({
             emptyState
           ) : (
             visibleRows.map((row, index) => (
-              <DataRow<T>
+              <LegacyDataRow<T>
                 key={row.id}
                 row={row}
                 isLastRow={index === visibleRows.length - 1}

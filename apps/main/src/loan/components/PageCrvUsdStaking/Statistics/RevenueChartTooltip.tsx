@@ -1,5 +1,5 @@
 import type { YieldKeys } from '@/loan/components/PageCrvUsdStaking/types'
-import type { ScrvUsdYieldWithAverages } from '@/loan/entities/scrvusd-yield'
+import type { ScrvUsdYieldWithAverages } from '@/loan/entities/scrvusd-yield.query'
 import { formatDate } from '@ui/utils'
 import { t } from '@ui-kit/lib/i18n'
 import { ChartTooltipShell, ChartTooltipSeriesGroup, ChartTooltipSeriesRow } from '@ui-kit/shared/ui/Chart'
@@ -12,7 +12,7 @@ const lineLabels: Record<YieldKeys, string> = {
   proj_apy_total_avg: t`Average APY`,
 }
 
-const format = (value: number) => formatNumber(value, { unit: 'percentage', abbreviate: false })
+const format = (value: number) => formatNumber(value, 'percent.value')
 
 type RevenueChartTooltipProps = {
   datum: ScrvUsdYieldWithAverages

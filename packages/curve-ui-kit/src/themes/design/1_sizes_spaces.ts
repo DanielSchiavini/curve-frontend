@@ -57,6 +57,14 @@ const MappedButtonSize = {
   lg: Sizing[650], // 56px
 }
 
+const MappedHorizontalMetricSize = {
+  xs: Sizing[250], // 20px
+  sm: Sizing[300], // 24px
+  md: Sizing[400], // 32px
+  lg: Sizing[600], // 48px
+  xl: Sizing[800], // 88px
+}
+
 const MappedInputSize = {
   tiny: MappedButtonSize.xs,
   small: MappedButtonSize.sm,
@@ -175,6 +183,45 @@ const MappedLineHeight = {
   },
 } as const
 
+const MappedBadge = {
+  BorderWidth: Sizing[10],
+  Size: {
+    extraSmall: Sizing[200],
+    small: Sizing[350],
+    medium: Sizing[500],
+    large: Sizing[600],
+    extraLarge: Sizing[650],
+  },
+  IconSize: {
+    extraSmall: MappedIconSize.xs,
+    small: MappedIconSize.sm,
+    medium: MappedIconSize.md,
+    large: MappedIconSize.lg,
+    extraLarge: MappedIconSize.xl,
+  },
+  Gap: {
+    extraSmall: Spacing[75],
+    small: Spacing[100],
+    medium: Spacing[100],
+    large: Spacing[200],
+    extraLarge: Spacing[200],
+  },
+  Padding: {
+    extraSmall: { x: Spacing[100], y: Spacing[75] },
+    small: { x: Spacing[200], y: Spacing[100] },
+    medium: { x: Spacing[200], y: Spacing[300] },
+    large: { x: Spacing[300], y: Spacing[200] },
+    extraLarge: { x: Spacing[300], y: Spacing[200] },
+  },
+  LineHeight: {
+    extraSmall: MappedLineHeight.xs,
+    small: MappedLineHeight.xs,
+    medium: MappedLineHeight.xs,
+    large: MappedLineHeight.md,
+    extraLarge: Sizing[300],
+  },
+} as const
+
 const MappedModalWidth = {
   xs: '19rem', // 304px
   sm: '24rem', // 384px
@@ -200,7 +247,9 @@ export const SizesAndSpaces = {
   SelectSpacing: MappedSelectSpacing,
   SelectListItem: MappedSelectListItem,
   LargeTokenInput: MappedLargeTokenInput,
+  Badge: MappedBadge,
   Grid: MappedGrid,
+  Metric: { horizontal: MappedHorizontalMetricSize },
   FontSize: MappedFontSize,
   FontWeight: MappedFontWeight,
   LineHeight: MappedLineHeight,
@@ -220,11 +269,8 @@ export const SizesAndSpaces = {
     footer: '96rem', // 1536px
     connectWallet: '50rem', // 800px
     actionCard: '28rem', // 448px
-    legacyActionCard: '29rem', // 464px, only used in the scrvusd action card which isn't refactored to use the new token inputs yet
-    legacyMarketAndBorrowDetails: '34.375rem', // 530px, breaks the grid when it becomes too tight
     candleAndBandChart: '68.75rem', // 1100px, switches to column from row when charts start to become to small next to eachother
     emptyStateCard: '27.5rem', // 440px
-    section: '59.5rem', // 952px
     tooltip: '27.5rem', // 440px
     chartTooltip: { mobile: '16.4rem', tablet: '20.5rem' }, // 264px/328px
     sliderInput: {
@@ -236,12 +282,22 @@ export const SizesAndSpaces = {
   },
   Height: {
     modal: MappedModalHeight,
+    table: {
+      events: '28.875rem', // 462px
+      noResults: {
+        sm: '8rem', // 128px
+        lg: '25rem', // 400px
+      },
+    },
     row: Sizing[700],
     chart: 420, // lightweight charts require height in number format
     shortChart: 210,
+    healthBar: {
+      legacy: '2rem', // 36px
+      new: '1.5rem', // 24px
+    },
   },
   MinHeight: {
-    tableNoResults: { sm: '15vh', lg: '35vh' },
     pageContent: '80vh',
     popoverHeader: '2rem', // 32px
     maintenancePage: '100vh',
@@ -249,7 +305,6 @@ export const SizesAndSpaces = {
   MaxHeight: {
     popover: '17rem', // 272px
     tokenSelector: '47rem', // 752px
-    userEventsTable: '28.875rem', // 462px
     drawer: '80vh',
   },
 } as const

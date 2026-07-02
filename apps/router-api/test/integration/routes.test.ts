@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PartialRecord } from '@primitives/objects.utils'
+import { assert, type PartialRecord } from '@primitives/objects.utils'
 import type { RouteProvider, RouterRouteResponse } from '@primitives/router.utils'
 import { app } from '../../src/app'
 import { toWei } from '../../src/router.utils'
@@ -8,18 +8,23 @@ import { ADDRESS_HEX_PATTERN, type RoutesQuery } from '../../src/routes/routes.s
 process.loadEnvFile()
 
 const CHAIN_ID_ETHEREUM = '1'
+const CHAIN_ID_OPTIMISM = '10'
 const ETHEREUM_USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 const ETHEREUM_USDT = '0xdac17f958d2ee523a2206206994597c13d831ec7'
+
+const OPTIMISM_USDC = '0x0b2c639c533813f4aa9d7837caf62653d097ff85'
+const OPTIMISM_USDT = '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58'
 
 const CHAIN_ID_ARBITRUM = '42161'
 const ARBITRUM_USDC = '0xaf88d065e77c8cc2239327c5edb3a432268e5831'
 const ARBITRUM_USDT = '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9'
 
-const CHAIN_ID_CORN = '21000000'
-const CORN = '0x44f49ff0da2498bcb1d3dc7c0f999578f67fd8c6'
-const CORN_WBTCN = '0xda5ddd7270381a7c2717ad10d1c0ecb19e3cdfb2'
-const BTC_DECIMALS = 18
+const CHAIN_ID_PLASMA = '9745'
+const CORN_USDT0 = '0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb'
+const CORN_SUSDE = '0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2'
+
 const USD_DECIMALS = 6
+const USDT0_DECIMALS = 6
 
 type QueryString = { [P in keyof RoutesQuery]?: string | string[] }
 type SuccessCase = { query: QueryString; expectedRoutes?: number }
@@ -74,8 +79,13 @@ const successCasesByProvider: PartialRecord<RouteProvider, Record<string, Succes
         amountOut: [toWei('1000', USD_DECIMALS)],
       },
     },
-    'corn amountIn': {
-      query: { chainId: CHAIN_ID_CORN, tokenIn: [CORN], tokenOut: [CORN_WBTCN], amountIn: [toWei('10', BTC_DECIMALS)] },
+    'plasma amountIn': {
+      query: {
+        chainId: CHAIN_ID_PLASMA,
+        tokenIn: [CORN_USDT0],
+        tokenOut: [CORN_SUSDE],
+        amountIn: [toWei('10', USDT0_DECIMALS)],
+      },
     },
   },
   enso: {
@@ -99,6 +109,16 @@ const successCasesByProvider: PartialRecord<RouteProvider, Record<string, Succes
         userAddress: '0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7', // Hyperliquid: Deposit Bridge 2 (largest USDC holder on Arbitrum now)
       },
     },
+    'optimism amountIn': {
+      query: {
+        chainId: CHAIN_ID_OPTIMISM,
+        tokenIn: [OPTIMISM_USDC],
+        tokenOut: [OPTIMISM_USDT],
+        amountIn: [toWei('100', USD_DECIMALS)],
+        router: ['enso'],
+        userAddress: '0xBA12222222228d8Ba445958a75a0704d566BF2C8', // Balancer Vault
+      },
+    },
     'arbitrum amountOut': {
       query: {
         chainId: CHAIN_ID_ARBITRUM,
@@ -116,11 +136,78 @@ const successCasesByProvider: PartialRecord<RouteProvider, Record<string, Succes
         tokenIn: [ETHEREUM_USDT],
         tokenOut: [ETHEREUM_USDC],
         amountIn: [toWei('1000', USD_DECIMALS)],
+        blacklist: [ETHEREUM_USDC],
         router: ['odos'],
         // Odos requires a caller (leverage zap) and a blacklist address; any valid addresses are acceptable for quoting
         userAddress: '0xC5898606BdB494a994578453B92e7910a90aA873',
         slippage: '0.5',
       },
+    },
+  },
+  '0x': {
+    'ethereum amountIn': {
+      query: {
+        chainId: CHAIN_ID_ETHEREUM,
+        tokenIn: [ETHEREUM_USDC],
+        tokenOut: [ETHEREUM_USDT],
+        amountIn: [toWei('1000', USD_DECIMALS)],
+        router: ['0x'],
+        userAddress: '0xF977814e90dA44bFA03b6295A0616a897441aceC',
+      },
+    },
+    'optimism amountIn': {
+      query: {
+        chainId: CHAIN_ID_OPTIMISM,
+        tokenIn: [OPTIMISM_USDC],
+        tokenOut: [OPTIMISM_USDT],
+        amountIn: [toWei('100', USD_DECIMALS)],
+        router: ['0x'],
+        userAddress: '0xBA12222222228d8Ba445958a75a0704d566BF2C8',
+      },
+    },
+    'arbitrum amountIn': {
+      query: {
+        chainId: CHAIN_ID_ARBITRUM,
+        tokenIn: [ARBITRUM_USDC],
+        tokenOut: [ARBITRUM_USDT],
+        amountIn: [toWei('100', USD_DECIMALS)],
+        router: ['0x'],
+        userAddress: '0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7',
+      },
+    },
+  },
+  'curve-solver': {
+    'ethereum amountIn': {
+      query: {
+        chainId: CHAIN_ID_ETHEREUM,
+        tokenIn: [ETHEREUM_USDC],
+        tokenOut: [ETHEREUM_USDT],
+        amountIn: [toWei('1000', USD_DECIMALS)],
+        blacklist: [ETHEREUM_USDC],
+        router: ['curve-solver'],
+        userAddress: '0xF977814e90dA44bFA03b6295A0616a897441aceC',
+      },
+    },
+    'arbitrum amountIn': {
+      query: {
+        chainId: CHAIN_ID_ARBITRUM,
+        tokenIn: [ARBITRUM_USDC],
+        tokenOut: [ARBITRUM_USDT],
+        amountIn: [toWei('100', USD_DECIMALS)],
+        router: ['curve-solver'],
+        userAddress: '0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7',
+      },
+    },
+    'arbitrum amountOut': {
+      query: {
+        chainId: CHAIN_ID_ARBITRUM,
+        tokenIn: [ARBITRUM_USDC],
+        tokenOut: [ARBITRUM_USDT],
+        amountOut: [toWei('1000', USD_DECIMALS)],
+        router: ['curve-solver'],
+        userAddress: '0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7',
+      },
+      expectedRoutes: 0,
     },
   },
 }
@@ -198,23 +285,22 @@ describe('GET routes integration', () => {
         payload.forEach(route => {
           expect(route.router).toBe(router)
           expect(route.amountOut[0]).toMatch(/^[0-9]+\.?[0-9]*$/)
-          expect(route.priceImpact).toBeTypeOf(route.priceImpact == null ? 'undefined' : 'number')
+          expect(route.priceImpact).toBeTypeOf(route.priceImpact == null ? typeof null : 'number')
           expect(route.createdAt).toBeTypeOf('number')
-          expect(route.route.length).toBeGreaterThan(0)
+          const steps = assert(route.route, `No route steps for ${router} - ${label}`)
+          expect(steps).toBeDefined()
+          expect(steps.length).toBeGreaterThan(0)
 
-          route.route.forEach(step => {
-            if (router === 'curve') {
-              expect(step.protocol).toBe('curve')
-            }
+          steps.forEach(step => {
+            if (router.startsWith('curve')) expect(step.protocol).toBe(router)
             expect(step.tokenIn.join(',')).toMatch(ADDRESS_REGEX)
             expect(step.tokenOut.join(',')).toMatch(ADDRESS_REGEX)
           })
 
           const [expectedTokenIn] = query.tokenIn ?? []
           const [expectedTokenOut] = query.tokenOut ?? []
-          const [firstStep] = route.route
-          const lastStep = route.route[route.route.length - 1]
-          expect(firstStep.tokenIn.join(',').toLowerCase()).toBe(expectedTokenIn.toLowerCase())
+          const lastStep = steps[steps.length - 1]
+          expect(steps[0].tokenIn.join(',').toLowerCase()).toBe(expectedTokenIn.toLowerCase())
           expect(lastStep.tokenOut.join(',').toLowerCase()).toBe(expectedTokenOut.toLowerCase())
         })
       })

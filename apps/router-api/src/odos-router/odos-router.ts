@@ -20,6 +20,7 @@ async function getOdosQuote(
     tokenIn,
     tokenOut,
     amountIn,
+    blacklist,
     slippage,
     userAddress,
   }: {
@@ -27,6 +28,7 @@ async function getOdosQuote(
     tokenIn: Address
     tokenOut: Address
     amountIn: Decimal
+    blacklist: readonly Address[]
     slippage: number
     userAddress: Address
   },
@@ -34,7 +36,7 @@ async function getOdosQuote(
   env: RouterApiEnv,
 ) {
   const { ODOS_API_URL = 'https://prices.curve.finance/odos' } = env
-  const params: Record<keyof CurveOdosQuoteRequest, string> = {
+  const params = new URLSearchParams({
     chain_id: `${chainId}`,
     from_address: getToken(tokenIn),
     to_address: getToken(tokenOut),
@@ -42,10 +44,10 @@ async function getOdosQuote(
     slippage: `${slippage}`,
     pathVizImage: 'false', // prices API isn't returning images, maybe we could use them instead of `generateId`
     caller_address: userAddress,
-    blacklist: '',
-  }
+  } satisfies Omit<Record<keyof CurveOdosQuoteRequest, string>, 'blacklist'>)
+  blacklist.forEach(address => params.append('blacklist', address))
 
-  const quoteResponse = await fetch(`${ODOS_API_URL}/quote?${new URLSearchParams(params)}`, {
+  const quoteResponse = await fetch(`${ODOS_API_URL}/v3/quote?${params}`, {
     method: 'GET',
     headers: { accept: 'application/json' },
   })
@@ -72,14 +74,13 @@ async function assembleOdosQuote(
   })
   const { ok, status, statusText } = assembleResponse
   if (!ok) {
-    log.error({
+    return log.error({
       message: 'odos assemble request failed',
       status,
       statusText,
       params,
       body: await assembleResponse.text(),
     })
-    throw new Error(`Odos assemble error - ${status} ${statusText}`)
   }
   return (await assembleResponse.json()) as AssemblePathResponse
 }
@@ -97,6 +98,7 @@ export const buildOdosRouteResponse = async (
     chainId,
     tokenIn: [tokenIn],
     tokenOut: [tokenOut],
+    blacklist = [],
     amountIn: [amountIn] = [],
     userAddress,
     slippage = 0.5,
@@ -113,12 +115,9 @@ export const buildOdosRouteResponse = async (
     pathId,
     pathVizImage,
     priceImpact = null,
-  } = await getOdosQuote({ chainId, tokenIn, tokenOut, amountIn, slippage, userAddress }, log, env)
-  const { transaction } = await assembleOdosQuote(
-    { pathId: assert(pathId, 'Odos quote missing pathId'), userAddress },
-    log,
-    env,
-  )
+  } = await getOdosQuote({ chainId, tokenIn, tokenOut, amountIn, blacklist, slippage, userAddress }, log, env)
+  const { transaction } =
+    (await assembleOdosQuote({ pathId: assert(pathId, 'Odos quote missing pathId'), userAddress }, log, env)) ?? {}
   return [
     {
       router: protocol,

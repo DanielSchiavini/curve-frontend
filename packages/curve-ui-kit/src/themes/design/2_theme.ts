@@ -5,6 +5,8 @@ import { SurfacesAndText } from './1_surfaces_text'
 const InsetOverline = '0 0 auto' as const // Top border only
 const InsetUnderline = 'auto 0 0' as const // Bottom border only
 
+const Radius = { square: '0' } as const
+
 const SliderBackground = {
   Safe: { 25: Reds[500], 50: Oranges[500], 75: Yellows[500], 100: Greens[400] },
   Danger: { 25: Reds[200], 50: Reds[300], 75: Reds[400], 100: Reds[500] },
@@ -15,6 +17,48 @@ const SliderBackground = {
     100: alpha(Grays[300], 0.5),
   },
 } as const
+
+const LightFontWeight = {
+  Extra_Light: 200,
+  Light: 300,
+  Normal: 500,
+  Medium: 500,
+  Semi_Bold: 600,
+  Bold: 700,
+  Extra_Bold: 800,
+} as const
+
+const DarkFontWeight = {
+  Extra_Light: 200,
+  Light: 300,
+  Normal: 400,
+  Medium: 500,
+  Semi_Bold: 500,
+  Bold: 600,
+  Extra_Bold: 700,
+} as const
+
+const ChadFontWeight = {
+  Extra_Light: 400,
+  Light: 400,
+  Normal: 400,
+  Medium: 400,
+  Semi_Bold: 700,
+  Bold: 700,
+  Extra_Bold: 700,
+} as const
+
+type TypographyVariantOverride = {
+  fontSize?: string
+  lineHeight?: string
+}
+type TypographyVariantOverrides = Partial<Record<string, TypographyVariantOverride>>
+
+const DefaultTypographyVariantOverrides: TypographyVariantOverrides = {}
+const ChadTypographyVariantOverrides: TypographyVariantOverrides = {
+  bodyMRegular: { fontSize: 'sm', lineHeight: 'sm' },
+  bodyMBold: { fontSize: 'sm', lineHeight: 'sm' },
+}
 
 export const createLightDesign = (
   Light: typeof SurfacesAndText.plain.Light | typeof SurfacesAndText.inverted.Light,
@@ -103,22 +147,19 @@ export const createLightDesign = (
         Inverted: Grays[50],
       },
     },
-    FontFamily: {
-      Heading: 'Mona Sans',
-      Body: 'Mona Sans',
-      Mono: 'Mona Sans',
-      Button: 'Mona Sans',
-    },
+    FontFamily: 'Mona Sans',
+    FontWeight: LightFontWeight,
+    TypographyVariantOverrides: DefaultTypographyVariantOverrides,
   } as const
 
   const Button = {
     Focus_Outline_Width: '0.125rem', // 2px
     Focus_Outline: Color.Primary[500],
     Radius: {
-      xs: '0',
-      sm: '0',
-      md: '0',
-      lg: '0',
+      xs: Radius.square,
+      sm: Radius.square,
+      md: Radius.square,
+      lg: Radius.square,
     },
     Primary: {
       Default: {
@@ -316,7 +357,7 @@ export const createLightDesign = (
       Unit: Text.TextColors.Secondary,
       Meta: Text.TextColors.Secondary,
       MetaSubtle: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[600],
       Disabled: Text.TextColors.Disabled,
     },
@@ -327,7 +368,7 @@ export const createLightDesign = (
       Label: Text.TextColors.Secondary,
       Value: Text.TextColors.Primary,
       Unit: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[600],
       Disabled: Text.TextColors.Disabled,
     },
@@ -373,12 +414,13 @@ export const createLightDesign = (
       Outline: Layer.Highlight.Outline,
     },
     BorderRadius: {
-      Clickable: '0',
+      Clickable: Radius.square,
       NonClickable: '6.25rem', // 100px
     },
   } as const
 
   const Badges = {
+    Radius: Radius.square,
     Border: {
       Default: Light.Badges.Border.Default,
       Active: Light.Badges.Border.Active,
@@ -519,6 +561,7 @@ export const createLightDesign = (
   return {
     theme: 'light',
     Color,
+    Radius,
     Text,
     Button,
     Layer,
@@ -660,22 +703,19 @@ export const createDarkDesign = (Dark: typeof SurfacesAndText.plain.Dark | typeo
         Inverted: Grays[950],
       },
     },
-    FontFamily: {
-      Heading: 'Mona Sans',
-      Body: 'Mona Sans',
-      Mono: 'Mona Sans',
-      Button: 'Mona Sans',
-    },
+    FontFamily: 'Mona Sans',
+    FontWeight: DarkFontWeight,
+    TypographyVariantOverrides: DefaultTypographyVariantOverrides,
   } as const
 
   const Button = {
     Focus_Outline_Width: '0.125rem', // 2px
     Focus_Outline: Color.Primary[500],
     Radius: {
-      xs: '0',
-      sm: '0',
-      md: '0',
-      lg: '0',
+      xs: Radius.square,
+      sm: Radius.square,
+      md: Radius.square,
+      lg: Radius.square,
     },
     Primary: {
       Default: {
@@ -873,7 +913,7 @@ export const createDarkDesign = (Dark: typeof SurfacesAndText.plain.Dark | typeo
       Unit: Text.TextColors.Secondary,
       Meta: Text.TextColors.Secondary,
       MetaSubtle: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[200],
       Disabled: Text.TextColors.Disabled,
     },
@@ -884,7 +924,7 @@ export const createDarkDesign = (Dark: typeof SurfacesAndText.plain.Dark | typeo
       Label: Text.TextColors.Secondary,
       Value: Text.TextColors.Primary,
       Unit: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[200],
       Disabled: Text.TextColors.Disabled,
     },
@@ -930,12 +970,13 @@ export const createDarkDesign = (Dark: typeof SurfacesAndText.plain.Dark | typeo
       Outline: Layer.Highlight.Outline,
     },
     BorderRadius: {
-      Clickable: '0',
+      Clickable: Radius.square,
       NonClickable: '6.25rem', // 100px
     },
   } as const
 
   const Badges = {
+    Radius: Radius.square,
     Border: {
       Default: Dark.Badges.Border.Default,
       Active: Dark.Badges.Border.Active,
@@ -1076,6 +1117,7 @@ export const createDarkDesign = (Dark: typeof SurfacesAndText.plain.Dark | typeo
   return {
     theme: 'dark',
     Color,
+    Radius,
     Text,
     Button,
     Layer,
@@ -1178,22 +1220,19 @@ export const createChadDesign = (Chad: typeof SurfacesAndText.plain.Chad | typeo
         Inverted: Grays[50],
       },
     },
-    FontFamily: {
-      Heading: 'Minecraft',
-      Body: 'Hubot Sans',
-      Mono: 'Hubot Sans',
-      Button: 'Minecraft',
-    },
+    FontFamily: 'Ioskeley Mono',
+    FontWeight: ChadFontWeight,
+    TypographyVariantOverrides: ChadTypographyVariantOverrides,
   } as const
 
   const Button = {
     Focus_Outline_Width: '0.125rem', // 2px
     Focus_Outline: Color.Primary[300],
     Radius: {
-      xs: '0',
-      sm: '0',
-      md: '0',
-      lg: '0',
+      xs: Radius.square,
+      sm: Radius.square,
+      md: Radius.square,
+      lg: Radius.square,
     },
     Primary: {
       Default: {
@@ -1391,7 +1430,7 @@ export const createChadDesign = (Chad: typeof SurfacesAndText.plain.Chad | typeo
       Unit: Text.TextColors.Secondary,
       Meta: Text.TextColors.Secondary,
       MetaSubtle: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[600],
       Disabled: Text.TextColors.Disabled,
     },
@@ -1402,7 +1441,7 @@ export const createChadDesign = (Chad: typeof SurfacesAndText.plain.Chad | typeo
       Label: Text.TextColors.Secondary,
       Value: Text.TextColors.Primary,
       Unit: Text.TextColors.Secondary,
-      Helper: Text.TextColors.Secondary,
+      Helper: Text.TextColors.Tertiary,
       Error: Reds[600],
       Disabled: Text.TextColors.Disabled,
     },
@@ -1448,12 +1487,13 @@ export const createChadDesign = (Chad: typeof SurfacesAndText.plain.Chad | typeo
       Outline: Layer.Highlight.Outline,
     },
     BorderRadius: {
-      Clickable: '0',
-      NonClickable: '0',
+      Clickable: Radius.square,
+      NonClickable: '6.25rem', // 100px
     },
   } as const
 
   const Badges = {
+    Radius: Radius.square,
     Border: {
       Default: Chad.Badges.Border.Default,
       Active: Chad.Badges.Border.Active,
@@ -1594,6 +1634,7 @@ export const createChadDesign = (Chad: typeof SurfacesAndText.plain.Chad | typeo
   return {
     theme: 'chad',
     Color,
+    Radius,
     Text,
     Button,
     Layer,

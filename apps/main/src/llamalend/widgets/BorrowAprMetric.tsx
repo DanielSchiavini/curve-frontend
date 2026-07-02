@@ -4,6 +4,7 @@ import type { CampaignRewards } from '@ui-kit/entities/campaigns'
 import { t } from '@ui-kit/lib/i18n'
 import { Metric, type MetricProps } from '@ui-kit/shared/ui/Metric'
 import type { LlamaMarketType } from '@ui-kit/types/market'
+import { mapQuery, type QueryProp } from '@ui-kit/types/util'
 import { AVERAGE_CATEGORIES, type AverageCategory } from '@ui-kit/utils'
 import { getBorrowRateTooltipTitle } from '../llama.utils'
 import { TooltipOptions as defaultTooltipOptions } from './tooltips'
@@ -16,32 +17,31 @@ type BorrowRateMetric = {
   totalBorrowRate: number | null | undefined
   totalAverageBorrowRate: number | null | undefined
   extraRewards: CampaignRewards[]
-  loading: boolean
 }
 
 type BorrowAprMetricProps = {
   marketType: LlamaMarketType
-  borrowRate: BorrowRateMetric
+  borrowRate: QueryProp<BorrowRateMetric>
   collateralSymbol: string | null | undefined
   alignment?: MetricProps['alignment']
 }
 
 export const BorrowAprMetric = ({ marketType, borrowRate, collateralSymbol, alignment }: BorrowAprMetricProps) => {
-  const averageRatePeriod = AVERAGE_CATEGORIES[borrowRate.averageCategory].period
+  const averageRatePeriod = AVERAGE_CATEGORIES[borrowRate.data?.averageCategory ?? 'llamalend.market.rate'].period
   const title = getBorrowRateTooltipTitle({
-    totalBorrowApr: borrowRate?.totalBorrowRate,
-    extraRewards: borrowRate?.extraRewards ?? [],
-    rebasingYieldApr: borrowRate?.rebasingYield,
+    totalBorrowApr: borrowRate.data?.totalBorrowRate,
+    extraRewards: borrowRate.data?.extraRewards ?? [],
+    rebasingYieldApr: borrowRate.data?.rebasingYield,
   })
   return (
     <Metric
-      size="medium"
+      category="llamalend.marketHeader"
       alignment={alignment}
-      label={t`Borrow APR`}
-      value={borrowRate?.rate}
-      loading={borrowRate?.rate == null && borrowRate?.loading}
+      testId="market-net-borrow-apr"
+      label={t`Net Borrow APR`}
+      value={mapQuery(borrowRate, borrowRate => borrowRate.totalBorrowRate)}
       valueOptions={{ unit: 'percentage' }}
-      notional={maybe(borrowRate?.averageRate, data => ({
+      notional={maybe(borrowRate.data?.totalAverageBorrowRate, data => ({
         value: data,
         unit: { symbol: `% ${averageRatePeriod} Avg`, position: 'suffix' },
       }))}
@@ -50,15 +50,15 @@ export const BorrowAprMetric = ({ marketType, borrowRate, collateralSymbol, alig
         body: (
           <MarketNetBorrowAprTooltipContent
             marketType={marketType}
-            borrowApr={borrowRate?.rate}
-            totalBorrowApr={borrowRate?.totalBorrowRate}
-            totalAverageBorrowApr={borrowRate?.totalAverageBorrowRate}
-            averageApr={borrowRate?.averageRate}
+            borrowApr={borrowRate.data?.rate}
+            totalBorrowApr={borrowRate.data?.totalBorrowRate}
+            totalAverageBorrowApr={borrowRate.data?.totalAverageBorrowRate}
+            averageApr={borrowRate.data?.averageRate}
             periodLabel={averageRatePeriod}
-            extraRewards={borrowRate?.extraRewards ?? []}
-            rebasingYieldApr={borrowRate?.rebasingYield}
+            extraRewards={borrowRate.data?.extraRewards ?? []}
+            rebasingYieldApr={borrowRate.data?.rebasingYield}
             collateralSymbol={collateralSymbol}
-            isLoading={borrowRate?.loading}
+            isLoading={borrowRate.isLoading}
           />
         ),
         ...defaultTooltipOptions,

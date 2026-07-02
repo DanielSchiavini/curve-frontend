@@ -1,9 +1,10 @@
+import { useCallback } from 'react'
 import { getAddress, type Address } from 'viem'
 import type { Chain } from '@curvefi/prices-api'
 import { getPoolFilters } from '@curvefi/prices-api/chains'
 import { EmptyValidationSuite, type QueryData } from '@ui-kit/lib'
 import { queryFactory, type ChainNameParams } from '@ui-kit/lib/model'
-import { mapQuery } from '@ui-kit/types/util'
+import { useMappedQuery } from '@ui-kit/types/util'
 
 // List from api.curve.finance: https://raw.githubusercontent.com/curvefi/curve-api/eed5dd84492b3e5611a34504a98bc1fa256defa5/routes/v1/getHiddenPools.js
 // List for core api https://github.com/curvefi/curve-api-core/blob/ab4080c816438c9c97d0baab82ad939aabb9bc85/routes/v1/getHiddenPools.js
@@ -80,6 +81,7 @@ const blacklist: Partial<Record<ChainBlacklist, Address[]>> = {
     '0x349d27E78B3267180279687bf82caE3BD78F41e1', // factory-twocrypto-279 - IDRS token has broken balanceOf
     '0x771c91e699B4B23420de3F81dE2aA38C4041632b', // factory-stable-ng-506 - Team asked to hide, pool will not used
     '0x184F3Fed33D4194A5603C14481241BD089268e4b', // factory-stable-ng-685 - Team asked to hide
+    '0x907d9a72336d7f9a0809a44dbdfec28e5a99a83a', // factory-stable-ng-449 - deprecated token, team asked to hide it
   ],
   arbitrum: [
     '0x15FB53Cb126140dfbfDED07d0057E1896B2dbCa3', // factory-stable-ng-206 - Unitos.net/USDT - scam pool pretending to be USDT
@@ -226,7 +228,10 @@ const getBlacklist = (blacklistPricesApi: QueryData<typeof usePricesApiBlacklist
   ].map(address => getAddress(address)) // just to be sure there's no missing checksums from the prices api
 
 export const usePoolsBlacklist = ({ blockchainId }: ChainNameParams) =>
-  mapQuery(usePricesApiBlacklist({}), blacklist => (blockchainId ? getBlacklist(blacklist, blockchainId) : undefined))
+  useMappedQuery(
+    usePricesApiBlacklist({}),
+    useCallback(blacklist => (blockchainId ? getBlacklist(blacklist, blockchainId) : undefined), [blockchainId]),
+  )
 
 export const fetchPoolsBlacklist = async ({ blockchainId }: ChainNameParams) =>
   blockchainId ? getBlacklist(await fetchPricesApiBlacklist({}), blockchainId) : []

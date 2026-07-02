@@ -40,7 +40,11 @@ export const PoolLabel = ({
     [poolData?.tokens, poolData?.tokenAddresses],
   )
 
-  const poolAlert = usePoolAlert(poolData)
+  const poolAlert = usePoolAlert({
+    network: blockchainId,
+    poolAddress: poolData?.pool.address,
+    hasVyperVulnerability: poolData?.hasVyperVulnerability,
+  })
   const tokenAlert = useTokenAlert(poolData?.tokenAddressesAll ?? [])
   const isMobile = useIsMobile()
 
@@ -96,7 +100,6 @@ export const PoolLabel = ({
           {quickViewValue && <Chip>{quickViewValue}</Chip>}
         </Box>
       </Wrapper>
-
       {tokenAlert && isMobile && <StyledAlertBox alertType={tokenAlert.alertType}>{tokenAlert.message}</StyledAlertBox>}
       {poolAlert && !poolAlert.isPoolPageOnly && (
         <>

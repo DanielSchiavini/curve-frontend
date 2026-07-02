@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography'
 import type { CellContext } from '@tanstack/react-table'
 import { t } from '@ui-kit/lib/i18n'
 import { Tooltip } from '@ui-kit/shared/ui/Tooltip'
-import { formatPercent } from '@ui-kit/utils'
+import { formatNumber } from '@ui-kit/utils'
 import { LlamaMarketColumnId } from '../columns'
 
 export const LtvCell = ({ row }: CellContext<LlamaMarket, number>) => {
@@ -35,11 +35,11 @@ export const LtvCell = ({ row }: CellContext<LlamaMarket, number>) => {
     <Tooltip
       clickable
       title={t`LTV`}
-      body={<CurrentLTVTooltipContent debtDenomination={'Borrowed amount'} />}
+      body={<CurrentLTVTooltipContent debtDenomination="Borrowed amount" />}
       placement="top"
     >
       <Typography variant="tableCellMBold" color="textPrimary" sx={{ textAlign: 'right' }}>
-        {formatPercent(data.ltv)}
+        {formatNumber(data.ltv, 'percent.rate')}
       </Typography>
     </Tooltip>
   )

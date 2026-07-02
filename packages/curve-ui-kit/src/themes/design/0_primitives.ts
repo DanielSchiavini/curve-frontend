@@ -157,6 +157,7 @@ export const Duration = {
   LoadingTimeout: 5000,
   Banner: {
     Daily: TIME_FRAMES.DAY_MS,
+    Weekly: TIME_FRAMES.DAY_MS * 7,
     Monthly: TIME_FRAMES.MONTH_MS,
   },
   AverageRates: {
@@ -169,7 +170,7 @@ export const Duration = {
     Actionable: REFRESH_INTERVAL['1m'],
     Informative: REFRESH_INTERVAL['5m'],
     DontShowAfter: REFRESH_INTERVAL['10m'],
-    SemiStatic: REFRESH_INTERVAL['1d'],
+    SemiStatic: REFRESH_INTERVAL['1h'],
   },
 }
 

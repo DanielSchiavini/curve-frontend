@@ -3,7 +3,7 @@ import { advanceVirtualNetworkClock } from '@cy/support/helpers/tenderly/vnet-ad
 import type { CreateVirtualTestnetResponse } from '@cy/support/helpers/tenderly/vnet-create'
 import { LOAD_TIMEOUT } from '@cy/support/ui'
 import type { Decimal } from '@primitives/decimal.utils'
-import { formatNumber, formatUsd } from '@ui-kit/utils'
+import { formatNumber } from '@ui-kit/utils'
 import { loadTenderlyAccount } from '../../tenderly/account'
 import { sendVnetTransaction } from '../../tenderly/vnet-transaction'
 import { getActionInfo, getActionValue } from '../action-info.helpers'
@@ -53,7 +53,7 @@ const checkpointTenderlySupplyRewards = (
     gaugeAddress: Address
   }, // Some gauges expose freshly accrued rewards only after a user checkpoint updates internal reward accounting for that address.
 ) =>
-  loadTenderlyAccount().then(async tenderlyAccount => {
+  loadTenderlyAccount().then(LOAD_TIMEOUT, async tenderlyAccount => {
     await sendVnetTransaction({
       tenderly: { ...tenderlyAccount, vnetId: vnet.id },
       tx: {
@@ -190,11 +190,11 @@ export function checkClaimTableState({
 
     cy.get('[data-testid="data-table-cell-notional"]')
       .eq(index)
-      .contains(notional == null ? '-' : formatUsd(notional))
+      .contains(notional == null ? '-' : formatNumber(notional, 'usd.notional'))
   })
 
   if (rows.length > 1 && totalNotional != null) {
     cy.get('[data-testid="rewards-value"]').should('be.visible')
-    cy.contains(formatUsd(totalNotional)).should('be.visible')
+    cy.contains(formatNumber(totalNotional, 'usd.notional')).should('be.visible')
   }
 }

@@ -11,7 +11,10 @@ import storybook from 'eslint-plugin-storybook'
 import unusedImports from 'eslint-plugin-unused-imports'
 import tseslint from 'typescript-eslint'
 import { useMaybePatternRule } from './.eslint/use-maybe-pattern.rule.mjs'
+import { stableHookCallbacksRule } from './.eslint/stable-hook-callbacks.rule.mjs'
 import { noDoubleNegativeRule } from './.eslint/no-double-negative.rule.mjs'
+import { noJsxStringLiteralBracesRule } from './.eslint/no-jsx-string-literal-braces.rule.mjs'
+import { noQueryComponentPropsRule } from './.eslint/no-query-component-props.rule.mjs'
 import { noRedundantTernaryRule } from './.eslint/no-redundant-ternary.rule.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -51,7 +54,10 @@ const config = [
       local: {
         rules: {
           'use-maybe-pattern': useMaybePatternRule,
+          'stable-hook-callbacks': stableHookCallbacksRule,
           'no-double-negative': noDoubleNegativeRule,
+          'no-jsx-string-literal-braces': noJsxStringLiteralBracesRule,
+          'no-query-component-props': noQueryComponentPropsRule,
           'no-redundant-ternary': noRedundantTernaryRule,
         },
       },
@@ -74,7 +80,10 @@ const config = [
     },
     rules: {
       'local/use-maybe-pattern': 'error',
+      'local/stable-hook-callbacks': 'error',
       'local/no-double-negative': 'error',
+      'local/no-jsx-string-literal-braces': 'error',
+      'local/no-query-component-props': 'error',
       'local/no-redundant-ternary': 'error',
 
       'object-shorthand': 'warn',
@@ -101,8 +110,9 @@ const config = [
                 .map(targetApp => `apps/main/src/${targetApp}`),
               from: `apps/main/src/${importedApp}`, // from ==> the app imported
             })),
-            // forbid importing from the router-api app in app source code
+            // forbid importing from the api apps in app source code
             { target: ['apps/main/src/**'], from: 'apps/router-api' },
+            { target: ['apps/main/src/**'], from: 'apps/merkl-api' },
             // forbid `wagmi` external dependency package imports, except from feature
             { target: ['apps/**', 'packages/**', '!packages/curve-ui-kit/src/features/forms/**'], from: 'wagmi' },
           ],

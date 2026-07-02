@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useConnection } from 'wagmi'
 import { BandsChart } from '@/llamalend/features/bands-chart/BandsChart'
 import { useBandsChartPalette } from '@/llamalend/features/bands-chart/hooks/useBandsChartPalette'
 import type { ChartDataPoint, FetchedBandsBalances } from '@/llamalend/features/bands-chart/types'
@@ -20,7 +21,6 @@ import { ChartFooter } from '@ui-kit/shared/ui/Chart/ChartFooter'
 import { ChartHeader, type ChartSelections } from '@ui-kit/shared/ui/Chart/ChartHeader'
 import { type LegendItem } from '@ui-kit/shared/ui/Chart/LegendSet'
 import { ToggleBandsChartButton } from '@ui-kit/shared/ui/Chart/ToggleBandsChartButton'
-import { ErrorMessage } from '@ui-kit/shared/ui/ErrorMessage'
 import { type TabOption, TabsSwitcher } from '@ui-kit/shared/ui/Tabs/TabsSwitcher'
 import { SizesAndSpaces } from '@ui-kit/themes/design/1_sizes_spaces'
 
@@ -44,7 +44,6 @@ const hasVisiblePriceRangeChanged = (previous: { min: number; max: number }, nex
 
 type ChartAndActivityLayoutProps = {
   chart: {
-    ohlcDataUnavailable: boolean
     isLoading: boolean
     selectedChartKey: string | undefined
     setTimeOption: (option: TimeOption) => void
@@ -64,6 +63,7 @@ type ChartAndActivityLayoutProps = {
 }
 
 export const ChartAndActivityLayout = ({ chart, bands, activity }: ChartAndActivityLayoutProps) => {
+  const { isConnected } = useConnection()
   const theme = useTheme()
   const [isBandsVisible, setIsBandsVisible] = useBandsChartVisible()
   const toggleBandsVisible = useCallback(() => setIsBandsVisible(prev => !prev), [setIsBandsVisible])
@@ -77,7 +77,7 @@ export const ChartAndActivityLayout = ({ chart, bands, activity }: ChartAndActiv
     )
   }, [])
 
-  const showBands = bands && isBandsVisible
+  const showBands = bands && isBandsVisible && isConnected
   const hasUserBands = !!bands?.userBandsBalances?.length
   const collateralSymbol = bands?.collateralToken?.symbol
   const borrowSymbol = bands?.borrowToken?.symbol
@@ -102,7 +102,7 @@ export const ChartAndActivityLayout = ({ chart, bands, activity }: ChartAndActiv
   )
 
   return (
-    <Stack>
+    <Stack data-testid="market-chart-and-activity">
       <TabsSwitcher variant="contained" value={tab} onChange={setTab} options={TABS} />
       <Stack sx={{ backgroundColor: t => t.design.Layer[1].Fill }}>
         {tab === 'events' && <LlammaActivityEvents {...activity} />}
@@ -122,7 +122,15 @@ export const ChartAndActivityLayout = ({ chart, bands, activity }: ChartAndActiv
               }}
               isLoading={chart.isLoading}
               customButton={
-                bands && <ToggleBandsChartButton label="Bands" isVisible={isBandsVisible} toggle={toggleBandsVisible} />
+                isConnected &&
+                bands && (
+                  <ToggleBandsChartButton
+                    label={t`Bands`}
+                    tooltip={t`The price ranges your position can move through during soft liquidation.`}
+                    isVisible={isBandsVisible}
+                    toggle={toggleBandsVisible}
+                  />
+                )
               }
             />
             <Stack
@@ -131,20 +139,11 @@ export const ChartAndActivityLayout = ({ chart, bands, activity }: ChartAndActiv
                 gridTemplateColumns: showBands ? { mobile: '5fr 1fr', tablet: '7fr 1fr' } : undefined,
               }}
             >
-              {chart.ohlcDataUnavailable ? (
-                <ErrorMessage
-                  title="An error ocurred"
-                  subtitle={t`Chart data is not yet available for this market.`}
-                  errorMessage={t`Chart data is not yet available for this market.`}
-                  sx={{ alignSelf: 'center' }}
-                />
-              ) : (
-                <ChartWrapper
-                  {...chart.ohlcChartProps}
-                  betaBackgroundColor={theme.design.Layer[1].Fill}
-                  onVisiblePriceRangeChange={showBands ? handleVisiblePriceRangeChange : undefined}
-                />
-              )}
+              <ChartWrapper
+                {...chart.ohlcChartProps}
+                betaBackgroundColor={theme.design.Layer[1].Fill}
+                onVisiblePriceRangeChange={showBands ? handleVisiblePriceRangeChange : undefined}
+              />
               {showBands && (
                 <BandsChart
                   isLoading={bands.isLoading}

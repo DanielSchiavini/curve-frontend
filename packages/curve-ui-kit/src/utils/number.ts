@@ -6,6 +6,7 @@ const MAX_USD_VALUE = 100_000_000_000_000 // $ 100T 🤑
 
 /** Locale used for consistent number formatting across the application */
 const LOCALE = 'en-US'
+const DEFAULT_DECIMALS = 2
 
 /**
  * Calculates the exponent (in base 10) divided by 3 for a given number.
@@ -102,7 +103,7 @@ const formatterReset = { style: undefined, currency: undefined, notation: undefi
 export const defaultNumberFormatter = (
   value: Amount,
   {
-    decimals = 2,
+    decimals = DEFAULT_DECIMALS,
     trailingZeroDisplay = 'stripIfInteger',
     highPrecision = false,
     ...options
@@ -114,12 +115,16 @@ export const defaultNumberFormatter = (
   if (value === -Infinity) return '-∞'
   if (value === 0) return '0'
 
+  const usesSignificantDigits = options.minimumSignificantDigits != null || options.maximumSignificantDigits != null
+
   const absValue = Math.abs(value)
-  if (absValue > 0 && absValue < 0.00001) return value > 0 ? '<0.00001' : '>-0.00001'
+  if (!usesSignificantDigits && absValue > 0 && absValue < 0.00001) return value > 0 ? '<0.00001' : '>-0.00001'
 
   const formatted = value.toLocaleString(LOCALE, {
-    minimumFractionDigits: Math.min(decimals, options.maximumFractionDigits ?? Infinity),
-    maximumFractionDigits: highPrecision ? Math.max(4, decimals) : decimals,
+    ...(!usesSignificantDigits && {
+      minimumFractionDigits: Math.min(decimals, options.maximumFractionDigits ?? Infinity),
+      maximumFractionDigits: highPrecision ? Math.max(4, decimals) : decimals,
+    }),
     trailingZeroDisplay,
     ...options,
     ...formatterReset,
@@ -175,6 +180,57 @@ export type NumberFormatOptions = {
   /** Value returned when the input is nullish, an empty string, or numeric NaN */
   fallback?: string
 } & Omit<Intl.NumberFormatOptions, 'unit' | 'style' | 'compact' | 'notation' | 'currency'>
+
+const TOKEN_BALANCE_SIGNIFICANT_DIGITS = 5
+
+const NUMBER_FORMAT_CATEGORIES = {
+  multiplier: {
+    abbreviate: false,
+    fallback: '-',
+    unit: 'multiplier',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  },
+  'token.amount': { abbreviate: false, fallback: '-' },
+  'token.compact': { abbreviate: true, fallback: '-' },
+  'token.balance': {
+    abbreviate: false,
+    formatter: (value: Amount) => {
+      const absValue = Math.abs(Number(value))
+      return defaultNumberFormatter(
+        value,
+        // For values between 0 and 1, we want to round up to 5 significant digits,
+        // For values >= 1, we want to show up to 5 significant digits after the decimal point, depending on the magnitude of the number.
+        // For super big values that have more than 5 digits we don't want a max of 5 significant digits, as that will incorrectly round.
+        absValue && absValue < 1
+          ? { maximumSignificantDigits: TOKEN_BALANCE_SIGNIFICANT_DIGITS, trailingZeroDisplay: 'auto' }
+          : Number.isFinite(absValue)
+            ? {
+                maximumFractionDigits: Math.max(
+                  DEFAULT_DECIMALS,
+                  TOKEN_BALANCE_SIGNIFICANT_DIGITS - Math.floor(Math.log10(absValue)) - 1,
+                ),
+              }
+            : undefined,
+      )
+    },
+    fallback: '-',
+  },
+  'usd.amount': { unit: 'dollar', abbreviate: false, fallback: '-' },
+  'usd.notional': { unit: 'dollar', abbreviate: true, fallback: '-' },
+  'percent.value': { unit: 'percentage', abbreviate: false, fallback: '-' },
+  'percent.rate': {
+    unit: 'percentage',
+    abbreviate: true,
+    // Disregard the precision edge case around 0 and 1 and force using 2 decimals.
+    minimumFractionDigits: 2,
+    maximumSignificantDigits: undefined,
+    fallback: '-',
+  },
+  'pool.parameter': { unit: 'none', abbreviate: false, fallback: '-', decimals: 5 },
+} as const satisfies Record<string, NumberFormatOptions & { fallback: string }>
+
+export type NumberFormatCategory = keyof typeof NUMBER_FORMAT_CATEGORIES
 
 /**
  * Decomposes a number into its formatted parts including prefix, main value, suffix, and scale suffix.
@@ -237,7 +293,7 @@ type MissingAmount = null | undefined | ''
  * and reassembling them into a formatted string.
  *
  * @param value - The number to format. Nullish values and empty strings return `options.fallback` or `undefined`.
- * @param options - Formatting configuration options
+ * @param options - Formatting configuration options or semantic category preset
  * @param options.fallback - Returned for nullish values, empty strings, and numeric NaN values
  * @returns The formatted number as a string with prefix, main value, scale suffix, and suffix combined. Returns
  * `undefined` for nullish or empty values when no fallback is provided.
@@ -275,11 +331,17 @@ type MissingAmount = null | undefined | ''
  *
  * formatNumber(NaN, { abbreviate: false })
  * // Returns "NaN"
+ *
+ * formatNumber(1000000, 'usd.notional')
+ * // Returns "$1m"
  */
+export function formatNumber(value: Amount | MissingAmount, category: NumberFormatCategory): string
 export function formatNumber(value: Amount, options: NumberFormatOptions): string
 export function formatNumber(value: Amount | MissingAmount, options: NumberFormatOptions & { fallback: string }): string
 export function formatNumber(value: Amount | MissingAmount, options: NumberFormatOptions): string | undefined
-export function formatNumber(value: Amount | MissingAmount, options: NumberFormatOptions) {
+export function formatNumber(value: Amount | MissingAmount, options: NumberFormatOptions | NumberFormatCategory) {
+  options = typeof options === 'string' ? NUMBER_FORMAT_CATEGORIES[options] : options
+
   if (value == null || value === '' || (typeof value === 'number' && isNaN(value) && options.fallback !== undefined)) {
     return options.fallback
   }
@@ -290,19 +352,6 @@ export function formatNumber(value: Amount | MissingAmount, options: NumberForma
   const mainValue = isNegative ? decomposed.mainValue.slice(1) : decomposed.mainValue
   return [sign, decomposed.prefix, mainValue, decomposed.scaleSuffix, decomposed.suffix].filter(Boolean).join('')
 }
-
-/** Common percentage formatter across the board for most llamalend percentages */
-export const formatPercent = (value?: Amount | null) =>
-  formatNumber(value || 0, {
-    unit: 'percentage',
-    abbreviate: true,
-    // Disregard the precision edge case around 0 and 1 and force using 2 decimals
-    minimumFractionDigits: 2,
-    maximumSignificantDigits: undefined,
-  })
-
-export const formatUsd = (value: Amount, options?: NumberFormatOptions) =>
-  formatNumber(value, { unit: 'dollar', abbreviate: true, ...options })
 
 export const formatNumberRange = (numbers: number[] | null | undefined) =>
   !numbers || numbers?.some(n => n == null) || numbers.every(n => !n)

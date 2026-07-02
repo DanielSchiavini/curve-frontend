@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { getTokens } from '@/llamalend/llama.utils'
 import type { LlamaMarketTemplate } from '@/llamalend/llamalend.types'
 import {
   resetRepayExpectedBorrowed,
@@ -8,41 +7,42 @@ import {
 import { useRepayIsFull } from '@/llamalend/queries/repay/repay-is-full.query'
 import { useUserState } from '@/llamalend/queries/user'
 import type { RepayFormData, RepayParams } from '@/llamalend/queries/validation/repay.types'
+import type { Address } from '@primitives/address.utils'
 import { maybe } from '@primitives/objects.utils'
 import { useFormSync, useOnChangeCallback } from '@ui-kit/features/forms'
 import type { UseFormReturn } from '@ui-kit/features/forms'
 import { useTokenBalance } from '@ui-kit/hooks/useTokenBalance'
 import { queryMinimum } from '@ui-kit/lib'
-import { mapQuery } from '@ui-kit/types/util'
+import { mapQuery, q } from '@ui-kit/types/util'
 
-export function useMaxRepayTokenValues(
-  {
-    market,
-    params,
-    form,
-  }: {
-    market: LlamaMarketTemplate | undefined
-    params: RepayParams
-    form: UseFormReturn<RepayFormData>
-  },
-  enabled?: boolean,
-) {
-  const { borrowToken, collateralToken } = market ? getTokens(market) : {}
+export function useMaxRepayTokenValues({
+  market,
+  borrowTokenAddress,
+  collateralTokenAddress,
+  params,
+  form,
+}: {
+  market: LlamaMarketTemplate | undefined
+  borrowTokenAddress: Address | undefined
+  collateralTokenAddress: Address | undefined
+  params: RepayParams
+  form: UseFormReturn<RepayFormData>
+}) {
   const { update: updateForm } = form
   const { chainId, userAddress } = params
   const maxUserCollateral = useTokenBalance({
     chainId,
     userAddress,
-    tokenAddress: collateralToken?.address,
+    tokenAddress: collateralTokenAddress,
   })
   const maxUserBorrowed = useTokenBalance({
     chainId,
     userAddress,
-    tokenAddress: borrowToken?.address,
+    tokenAddress: borrowTokenAddress,
   })
-  const userState = useUserState(params, enabled)
+  const userState = useUserState(params)
   // required for isFull query
-  const isFull = useRepayIsFull(params, enabled)
+  const isFull = useRepayIsFull(params)
 
   const maxBorrowed = queryMinimum(
     maxUserBorrowed,
@@ -63,9 +63,9 @@ export function useMaxRepayTokenValues(
   return {
     isFull,
     max: {
-      userCollateral: { ...maxUserCollateral, field: 'maxCollateral' as const },
-      userBorrowed: { ...maxBorrowed, field: 'maxBorrowed' as const },
-      stateCollateral: { ...mapQuery(userState, d => d.collateral), field: 'maxStateCollateral' as const },
+      userCollateral: { ...q(maxUserCollateral), fieldName: 'maxCollateral' as const },
+      userBorrowed: { ...q(maxBorrowed), fieldName: 'maxBorrowed' as const },
+      stateCollateral: { ...mapQuery(userState, d => d.collateral), fieldName: 'maxStateCollateral' as const },
       expected: useRepayExpectedBorrowed(params),
     },
   }

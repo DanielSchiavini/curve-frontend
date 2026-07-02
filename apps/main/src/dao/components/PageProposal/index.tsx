@@ -78,7 +78,7 @@ export const Proposal = () => {
 
   const snapshotVeCrv = useMemo(
     () =>
-      maybes([proposal, votingPower], ([proposal, votingPower]) => ({
+      maybes([proposal, votingPower], (proposal, votingPower) => ({
         value: votingPower,
         blockNumber: proposal.block,
       })),
@@ -163,7 +163,7 @@ export const Proposal = () => {
           </UserSmScreenWrapper>
         </Box>
 
-        <SecondColumnBox display="flex" flexColumn flexGap={'var(--spacing-1)'} margin="0 0 auto var(--spacing-1)">
+        <SecondColumnBox display="flex" flexColumn flexGap="var(--spacing-1)" margin="0 0 auto var(--spacing-1)">
           <Box variant="secondary">
             <UserBox
               votingPower={snapshotVeCrv}

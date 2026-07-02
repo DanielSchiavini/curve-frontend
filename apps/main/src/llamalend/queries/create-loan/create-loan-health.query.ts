@@ -9,11 +9,7 @@ import { createLoanQueryValidationSuite } from '../validation/borrow.validation'
 import { createLoanExpectedCollateralQueryKey } from './create-loan-expected-collateral.query'
 import { createLoanMaxReceiveKey } from './create-loan-max-receive.query'
 
-export const {
-  useQuery: useCreateLoanHealth,
-  invalidate: invalidateCreateLoanHealth,
-  refetchQuery: refetchCreateLoanHealth,
-} = queryFactory({
+export const { useQuery: useCreateLoanHealth, invalidate: invalidateCreateLoanHealth } = queryFactory({
   queryKey: ({
     chainId,
     marketId,
@@ -49,8 +45,7 @@ export const {
     switch (type) {
       case 'zapV2':
         return decimal(
-          (await impl.createLoanExpectedMetrics({ userCollateral, userBorrowed, debt, range, ...parseRoute(routeId) }))
-            .health,
+          (await impl.createLoanExpectedMetrics({ userCollateral, debt, range, ...parseRoute(routeId) })).health,
         )!
       case 'V1':
       case 'V2':

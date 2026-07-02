@@ -5,7 +5,9 @@ import svgr from 'vite-plugin-svgr'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 const {
-  API_PROXY_TARGET = 'http://localhost:3010',
+  API_PROXY_TARGET,
+  ROUTER_API_PROXY_TARGET = API_PROXY_TARGET || 'http://localhost:3010',
+  MERKL_API_PROXY_TARGET = 'http://localhost:3011',
   SENTRY_AUTH_TOKEN,
   SENTRY_ORG,
   SENTRY_PROJECT,
@@ -19,7 +21,10 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 3000,
     hmr: true,
-    proxy: { '/api': { target: API_PROXY_TARGET, changeOrigin: true } },
+    proxy: {
+      '/api/router': { target: ROUTER_API_PROXY_TARGET, changeOrigin: true },
+      '/api/merkl': { target: MERKL_API_PROXY_TARGET, changeOrigin: true },
+    },
     ignored: ['**/node_modules/**', '**/.git/**', '**/dist/**', '**/.yarn/**'],
   },
   build: {

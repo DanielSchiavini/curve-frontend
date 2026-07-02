@@ -1,9 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useNetworkByChain } from '@/dex/entities/networks'
 import { usePoolLiquidityEvents } from '@/dex/entities/pool-liquidity.query'
 import { usePoolsPricesApi } from '@/dex/queries/pools-prices-api.query'
 import { ChainId } from '@/dex/types/main.types'
-import type { Chain } from '@curvefi/prices-api'
+import { getBlockchainId } from '@curvefi/prices-api'
 import type { Address } from '@primitives/address.utils'
 import { scanAddressPath, scanTxPath } from '@ui/utils'
 import {
@@ -11,12 +11,14 @@ import {
   createPoolLiquidityColumns,
   usePoolActivityVisibility,
   useManualPagination,
-  getPageCount,
   DEFAULT_PAGE_SIZE,
 } from '@ui-kit/features/activity-table'
 import { useCurve } from '@ui-kit/features/connect-wallet'
 import { t } from '@ui-kit/lib/i18n'
+import { useCombinedQueries } from '@ui-kit/lib/queries/combine'
 import { getTableOptions, useTable } from '@ui-kit/shared/ui/DataTable/data-table.utils'
+import { fakeLoadingQ } from '@ui-kit/types/util'
+import { getPageCount } from '@ui-kit/utils'
 
 type UsePoolActivityProps = {
   chainId: ChainId
@@ -30,60 +32,62 @@ type UsePoolActivityProps = {
 export const usePoolActivityEventsConfig = ({ chainId, poolAddress }: UsePoolActivityProps) => {
   const { isHydrated } = useCurve()
   const { data: networkConfig } = useNetworkByChain({ chainId })
-  const network = networkConfig?.id.toLowerCase() as Chain
+  const network = getBlockchainId(networkConfig?.id)
   const { pagination, onPaginationChange, apiPage } = useManualPagination()
 
-  const { data: pricesApiPoolsMapper, isLoading: isPricesApiPoolsLoading } = usePoolsPricesApi({
-    blockchainId: network,
-  })
+  const poolPriceApi = usePoolsPricesApi({ blockchainId: network })
+  const { data: pricesApiPoolsMapper } = poolPriceApi
   const poolTokens = useMemo(
     () => pricesApiPoolsMapper?.[poolAddress]?.coins ?? [],
     [pricesApiPoolsMapper, poolAddress],
   )
   const { liquidityColumnVisibility } = usePoolActivityVisibility({ poolTokens })
 
-  const {
-    data: liquidityData,
-    isLoading: isLiquidityLoading,
-    isError: isLiquidityError,
-  } = usePoolLiquidityEvents({
+  const poolLiquidityEvents = usePoolLiquidityEvents({
     chain: network,
     poolAddress,
     page: apiPage,
     perPage: DEFAULT_PAGE_SIZE,
   })
+  const { data: liquidityData } = poolLiquidityEvents
 
   const pageCount = getPageCount(liquidityData?.count, DEFAULT_PAGE_SIZE)
 
   // Transform liquidity data with block explorer URLs and pool tokens
-  const liquidityWithUrls: PoolLiquidityRow[] = useMemo(
-    () =>
-      (network &&
-        liquidityData?.events.map(event => ({
+  const liquidityWithUrls = useCombinedQueries(
+    [poolLiquidityEvents, poolPriceApi, fakeLoadingQ(isHydrated || undefined)],
+    useCallback(
+      liquidityData =>
+        network &&
+        liquidityData.events.map(event => ({
           ...event,
           providerUrl: scanAddressPath(networkConfig, event.provider),
           txUrl: scanTxPath(networkConfig, event.txHash),
           network,
           poolTokens,
-        }))) ??
-      [],
-    [liquidityData?.events, network, networkConfig, poolTokens],
+        })),
+      [network, networkConfig, poolTokens],
+    ),
   )
 
-  const liquidityColumns = useMemo(() => createPoolLiquidityColumns({ poolTokens }), [poolTokens])
-
-  const isLoading = isLiquidityLoading || isPricesApiPoolsLoading || !isHydrated
-  const isError = isLiquidityError && !isHydrated
+  const liquidityColumns = useMemo(
+    () => createPoolLiquidityColumns({ blockchainId: network, poolTokens }),
+    [network, poolTokens],
+  )
 
   const table = useTable({
-    data: liquidityWithUrls,
+    query: liquidityWithUrls,
     columns: liquidityColumns,
     state: { columnVisibility: liquidityColumnVisibility, pagination },
     manualPagination: true,
     pageCount,
     onPaginationChange,
-    ...getTableOptions(liquidityWithUrls),
+    ...getTableOptions<PoolLiquidityRow>(liquidityWithUrls.data),
   })
 
-  return { table, isLoading, isError, emptyMessage: t`No liquidity data found.` }
+  return {
+    table,
+    emptyState: { title: t`No liquidity data found.` },
+    errorState: { title: t`Could not load liquidity data.` },
+  }
 }

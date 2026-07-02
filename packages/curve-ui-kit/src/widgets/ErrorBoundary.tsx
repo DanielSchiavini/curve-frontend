@@ -27,7 +27,7 @@ export const ErrorBoundary = ({
   children: ReactNode
   title: string
   subtitle?: string
-  refreshData?: () => void
+  refreshData?: () => Promise<unknown> | void
   inline?: boolean
 }) => (
   <CatchBoundary
@@ -47,7 +47,6 @@ export const ErrorBoundary = ({
             title={title}
             subtitle={subtitle}
             error={error}
-            errorMessage={error.message}
             refreshData={refreshData}
             sx={{ alignSelf: 'center' }}
           />

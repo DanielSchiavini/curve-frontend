@@ -1,27 +1,35 @@
-import { ReactNode, useCallback, useMemo } from 'react'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import Stack from '@mui/material/Stack'
-import Typography, { TypographyProps } from '@mui/material/Typography'
+import { type ReactNode, useCallback, useMemo } from 'react'
+import { type ButtonProps } from '@mui/material/Button'
+import Stack, { StackProps } from '@mui/material/Stack'
+import Typography, { type TypographyProps } from '@mui/material/Typography'
 import { toArray } from '@primitives/array.utils'
 import type { Amount } from '@primitives/decimal.utils'
+import { useBreakpoint } from '@ui-kit/hooks/useBreakpoints'
 import { t } from '@ui-kit/lib/i18n'
-import { ExclamationTriangleIcon } from '@ui-kit/shared/icons/ExclamationTriangleIcon'
+import { ErrorIconButton } from '@ui-kit/shared/ui/ErrorIconButton'
 import { Tooltip, type TooltipProps } from '@ui-kit/shared/ui/Tooltip'
 import { SizesAndSpaces } from '@ui-kit/themes/design/1_sizes_spaces'
 import type { TypographyVariantKey } from '@ui-kit/themes/typography'
+import type { MakeOptional, QueryProp } from '@ui-kit/types/util'
 import {
+  applySxProps,
   copyToClipboard,
+  decomposeNumber,
   defaultNumberFormatter,
   formatNumber,
-  decomposeNumber,
   type NumberFormatOptions,
   type SxProps,
-  applySxProps,
 } from '@ui-kit/utils'
 import { showToast } from '@ui-kit/widgets/Toast/toast.util'
+import { LabelTooltipIcon } from './LabelTooltipIcon'
+import { METRIC_CATEGORIES, type MetricCategory, type MetricLayout } from './metric-categories'
 import { WithSkeleton } from './WithSkeleton'
+import { WithWrapper } from './WithWrapper'
 
-const { Spacing, IconSize } = SizesAndSpaces
+const {
+  Spacing,
+  Metric: { horizontal: metricHorizontalSizes },
+} = SizesAndSpaces
 
 // Correspond to flexbox align items values.
 // eslint-disable-next-line react-refresh/only-export-components
@@ -50,11 +58,45 @@ const MetricChangeSize = {
   extraLarge: 'highlightM',
 } as const satisfies Record<string, TypographyVariantKey>
 
-// eslint-disable-next-line react-refresh/only-export-components -- Existing violation before enabling this rule.
-export const SIZES = Object.keys(MetricSize) as (keyof typeof MetricSize)[]
+const MetricButtonSize = {
+  small: 'extraSmall',
+  medium: 'extraSmall',
+  large: 'small',
+  extraLarge: 'medium',
+} satisfies Record<keyof typeof MetricSize, ButtonProps['size']>
+
+const MetricMinHeight = {
+  small: metricHorizontalSizes.sm,
+  medium: metricHorizontalSizes.md,
+  large: metricHorizontalSizes.lg,
+  extraLarge: metricHorizontalSizes.xl,
+} satisfies Record<keyof typeof MetricSize, string>
+
+const ORIENTATION_STYLE = {
+  horizontal: {
+    direction: 'row',
+    alignItems: () => 'baseline',
+    labelVariant: 'bodyMRegular',
+    labelColor: 'textSecondary',
+  },
+  vertical: {
+    direction: 'column',
+    alignItems: (alignment: Alignment) => alignment,
+    labelVariant: 'bodyXsRegular',
+    labelColor: 'textTertiary',
+  },
+} as const satisfies Record<
+  MetricLayout['orientation'],
+  {
+    direction: StackProps['direction']
+    alignItems: (alignment: Alignment) => 'baseline' | Alignment
+    labelVariant: TypographyVariantKey
+    labelColor: TypographyProps['color']
+  }
+>
 
 type Notional = Omit<NumberFormatOptions, 'abbreviate'> & {
-  value: number
+  value: Amount
   abbreviate?: boolean // Defaults to true
 }
 
@@ -90,20 +132,29 @@ const notionalsToString = (notionals: MetricProps['notional']) =>
 /** At the moment of writing the default formatter already formats to 2 decimals, but I really want to make this explicit for potential future changes. */
 const formatChange = (value: number): string => defaultNumberFormatter(value, { decimals: 2 })
 
-type MetricValueProps = Pick<MetricProps, 'value' | 'valueOptions' | 'change' | 'testId'> & {
-  size: NonNullable<MetricProps['size']>
+/**
+ * MUI Typography resolves the `color` prop through registered theme color names.
+ * Hex values need to be applied as CSS to avoid being treated as unresolved theme colors.
+ */
+const getTypographyColorProps = (color: TypographyProps['color']) =>
+  typeof color === 'string' && color.startsWith('#') ? { sx: { color } } : { color }
+
+type MetricValueProps = Pick<MetricProps, 'valueOptions' | 'change' | 'testId'> & {
+  value: Amount | null
+  size: MetricLayout['size']
   tooltip?: MetricProps['valueTooltip']
   copyValue?: () => void
 }
 
-const MetricValue = ({ value, valueOptions, change, size, copyValue, tooltip, testId }: MetricValueProps) => {
+const MetricValue = ({ value, valueOptions = {}, change, size, copyValue, tooltip, testId }: MetricValueProps) => {
   const numberValue = useMemo(() => ((value || value === 0) && isFinite(Number(value)) ? Number(value) : null), [value])
-  const { color = 'textPrimary', abbreviate = true, ...formattingOptions } = valueOptions
+  const { color = 'textPrimary', abbreviate = true, fallback = t`N/A`, ...formattingOptions } = valueOptions
   const { prefix, mainValue, scaleSuffix, suffix } =
     numberValue === null ? {} : decomposeNumber(numberValue, { ...formattingOptions, abbreviate })
 
   const fontVariant = MetricSize[size]
   const fontVariantUnit = MetricUnitSize[size]
+  const valueColorProps = getTypographyColorProps(color)
 
   return (
     <Stack direction="row" sx={{ gap: Spacing.xxs, alignItems: 'baseline' }}>
@@ -113,7 +164,7 @@ const MetricValue = ({ value, valueOptions, change, size, copyValue, tooltip, te
         onClick={copyValue}
         sx={copyValue && { cursor: 'pointer' }}
         {...tooltip}
-        title={tooltip?.title ?? (numberValue == null ? t`N/A` : numberValue.toLocaleString())}
+        title={tooltip?.title ?? (numberValue == null ? fallback : numberValue.toLocaleString())}
         data-testid={`${testId}-value`}
         data-value={value}
       >
@@ -124,12 +175,16 @@ const MetricValue = ({ value, valueOptions, change, size, copyValue, tooltip, te
             </Typography>
           )}
 
-          <Typography variant={fontVariant} color={color}>
-            {mainValue ?? t`N/A`}
+          <Typography variant={fontVariant} {...valueColorProps}>
+            {mainValue ?? fallback}
           </Typography>
 
           {scaleSuffix && (
-            <Typography variant={fontVariant} color="textPrimary" sx={{ textTransform: 'capitalize' }}>
+            <Typography
+              variant={fontVariant}
+              {...valueColorProps}
+              sx={applySxProps(valueColorProps.sx, { textTransform: 'capitalize' })}
+            >
               {scaleSuffix}
             </Typography>
           )}
@@ -153,12 +208,17 @@ const MetricValue = ({ value, valueOptions, change, size, copyValue, tooltip, te
   )
 }
 
+const NotionalTypography = ({ children }: { children: ReactNode }) => (
+  <Typography variant="highlightXsNotional" color="textTertiary">
+    {children}
+  </Typography>
+)
+
 export type MetricProps = {
   /** The actual metric value to display */
-  value: Amount | '' | false | undefined | null
-  valueOptions: Omit<NumberFormatOptions, 'abbreviate'> & {
+  value: QueryProp<MetricValueProps['value']>
+  valueOptions?: MakeOptional<NumberFormatOptions, 'abbreviate'> /* defaults to true */ & {
     color?: TypographyProps['color']
-    abbreviate?: boolean // Default to true
   }
 
   /** Optional value that denotes a change in metric value since 'last' time */
@@ -175,23 +235,20 @@ export type MetricProps = {
   /** Notional values give extra context to the metric, like underlying value */
   notional?: number | string | Notional | Notional[]
 
-  /** Optional content to display to the right of the value */
-  rightAdornment?: ReactNode
+  /** Optional icon shown after the value in vertical orientation and before the label in the horizontal orientation. */
+  icon?: ReactNode
 
-  /** Shows an error triangle icon on the metric value row. */
-  error?: Error | null
   /** Optional tooltip shown when hovering the error triangle icon. Must include both title and body. */
   errorTooltip?: MetricErrorTooltip
 
-  size?: keyof typeof MetricSize
+  category: MetricCategory
   alignment?: Alignment
-  loading?: boolean
   testId?: string
   sx?: SxProps
 }
 
 export const Metric = ({
-  value,
+  value: { error, data, isLoading },
   valueOptions = {},
   change,
 
@@ -202,67 +259,88 @@ export const Metric = ({
 
   notional,
 
-  rightAdornment,
-  error = undefined,
+  icon,
   errorTooltip,
 
-  size = 'medium',
+  category,
   alignment = 'start',
-  loading = false,
   testId = 'metric',
   sx,
 }: MetricProps) => {
+  const breakpoint = useBreakpoint()
+  const { orientation, size } = METRIC_CATEGORIES[category][breakpoint]
+  const orientationStyle = ORIENTATION_STYLE[orientation]
+  const isHorizontal = orientation === 'horizontal'
   const notionals = useMemo(() => notionalsToString(notional), [notional])
   const copyValue = useCallback(() => {
-    if (value || value === 0) {
-      void copyToClipboard(value.toString())
-      showToast({ title: copyText, message: value, severity: 'info' })
+    if (data || data === 0) {
+      void copyToClipboard(data.toString())
+      showToast({ title: copyText, message: data, severity: 'info' })
     }
-  }, [value, copyText])
+  }, [data, copyText])
 
   return (
-    <Stack data-testid={testId} sx={applySxProps({ alignItems: alignment }, sx)}>
-      <Typography variant="bodyXsRegular" color="textTertiary">
-        {label}
-        {labelTooltip && (
-          <Tooltip arrow placement="top" {...labelTooltip}>
-            <span>
-              {' '}
-              <InfoOutlinedIcon sx={{ width: IconSize.xs, height: IconSize.xs }} />
-            </span>
-          </Tooltip>
-        )}
-      </Typography>
-      <WithSkeleton loading={loading}>
-        <Stack direction="row" sx={{ alignItems: 'baseline' }}>
+    <Stack
+      data-testid={testId}
+      direction={orientationStyle.direction}
+      sx={applySxProps(
+        { alignItems: orientationStyle.alignItems(alignment) },
+        isHorizontal && {
+          justifyContent: 'space-between',
+          alignSelf: 'stretch',
+          columnGap: Spacing.sm,
+          minHeight: MetricMinHeight[size],
+        },
+        sx,
+      )}
+    >
+      <WithWrapper
+        shouldWrap={isHorizontal}
+        Wrapper={Stack}
+        direction="row"
+        sx={{ alignItems: 'baseline', flexShrink: 0 }}
+      >
+        {isHorizontal && icon}
+        <Typography variant={orientationStyle.labelVariant} color={orientationStyle.labelColor}>
+          {label}
+          <LabelTooltipIcon tooltip={labelTooltip} />
+        </Typography>
+      </WithWrapper>
+      <WithSkeleton loading={isLoading}>
+        <Stack
+          direction="row"
+          sx={applySxProps(
+            { alignItems: 'baseline' },
+            isHorizontal && {
+              flexWrap: 'wrap',
+              gap: Spacing.xxs,
+              justifyContent: 'flex-end',
+            },
+          )}
+        >
           {/* Keep error state vertical rhythm aligned with regular metric values by inheriting metric typography sizing. */}
           {error ? (
             <Tooltip arrow placement="bottom" title={errorTooltip?.title} body={errorTooltip?.body} {...errorTooltip}>
-              <Typography component="span" variant={MetricSize[size]} color="error">
-                <ExclamationTriangleIcon fontSize="inherit" />
-              </Typography>
+              <ErrorIconButton size={MetricButtonSize[size]} error={error} />
             </Tooltip>
           ) : (
             <>
               <MetricValue
-                value={value}
+                value={data ?? null}
                 valueOptions={valueOptions}
                 change={change}
                 size={size}
-                copyValue={value || value === 0 ? copyValue : undefined}
+                copyValue={data || data === 0 ? copyValue : undefined}
                 tooltip={valueTooltip}
                 testId={testId}
               />
-              {rightAdornment}
+              {!isHorizontal && icon}
             </>
           )}
+          {isHorizontal && notionals && <NotionalTypography>{notionals}</NotionalTypography>}
         </Stack>
       </WithSkeleton>
-      {notionals && (
-        <Typography variant="highlightXsNotional" color="textTertiary">
-          {notionals}
-        </Typography>
-      )}
+      {!isHorizontal && notionals && <NotionalTypography>{notionals}</NotionalTypography>}
     </Stack>
   )
 }

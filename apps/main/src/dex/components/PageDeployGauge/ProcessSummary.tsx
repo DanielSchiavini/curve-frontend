@@ -10,8 +10,8 @@ import { Icon } from '@ui/Icon'
 import { ExternalLink } from '@ui/Link/ExternalLink'
 import { Spinner } from '@ui/Spinner'
 import { scanTxPath } from '@ui/utils'
-import { useNavigate } from '@ui-kit/hooks/router'
 import { t } from '@ui-kit/lib/i18n'
+import { RouterLink } from '@ui-kit/shared/ui/RouterLink'
 import { Chain } from '@ui-kit/utils'
 
 type Props = {
@@ -23,8 +23,6 @@ export const ProcessSummary = ({ chainId, isLite }: Props) => {
   const deploymentStatus = useStore(state => state.deployGauge.deploymentStatus)
   const linkPoolAddress = useStore(state => state.deployGauge.linkPoolAddress)
   const currentSidechain = useStore(state => state.deployGauge.currentSidechain)
-
-  const push = useNavigate()
   const { data: network } = useNetworkByChain({ chainId })
   const { data: networkSidechain } = useNetworkByChain({ chainId: currentSidechain ?? Chain.Ethereum })
 
@@ -49,16 +47,16 @@ export const ProcessSummary = ({ chainId, isLite }: Props) => {
               {deploymentStatus.sidechain.status === 'SUCCESS' && deploymentStatus.sidechain.transaction && (
                 <SuccessfulTransactionInfo>
                   <Box flex flexAlignItems="center">
-                    <StyledCheckmark name={'CheckmarkFilled'} size={16} aria-label={t`Checkmark filled`} />
+                    <StyledCheckmark name="CheckmarkFilled" size={16} aria-label={t`Checkmark filled`} />
                     <SuccessMessage>{t`Sidechain gauge successfully deployed`}</SuccessMessage>
                   </Box>
                   <Transaction
-                    variant={'contained'}
+                    variant="contained"
                     href={scanTxPath(networkSidechain, deploymentStatus.sidechain.transaction.hash)}
                   >
                     <p>{t`Transaction:`}</p>
                     {shortenString(deploymentStatus.sidechain.transaction.hash)}
-                    <StyledIcon name={'Launch'} size={16} />
+                    <StyledIcon name="Launch" size={16} />
                   </Transaction>
                 </SuccessfulTransactionInfo>
               )}
@@ -81,16 +79,13 @@ export const ProcessSummary = ({ chainId, isLite }: Props) => {
               {deploymentStatus.mirror.status == 'SUCCESS' && deploymentStatus.mirror.transaction && (
                 <SuccessfulTransactionInfo>
                   <Box flex flexAlignItems="center">
-                    <StyledCheckmark name={'CheckmarkFilled'} size={16} aria-label={t`Checkmark filled`} />
+                    <StyledCheckmark name="CheckmarkFilled" size={16} aria-label={t`Checkmark filled`} />
                     <SuccessMessage>{t`Mirror gauge successfully deployed`}</SuccessMessage>
                   </Box>
-                  <Transaction
-                    variant={'contained'}
-                    href={scanTxPath(network, deploymentStatus.mirror.transaction.hash)}
-                  >
+                  <Transaction variant="contained" href={scanTxPath(network, deploymentStatus.mirror.transaction.hash)}>
                     <p>{t`Transaction:`}</p>
                     {shortenString(deploymentStatus.mirror.transaction.hash)}
-                    <StyledIcon name={'Launch'} size={16} />
+                    <StyledIcon name="Launch" size={16} />
                   </Transaction>
                 </SuccessfulTransactionInfo>
               )}
@@ -101,7 +96,7 @@ export const ProcessSummary = ({ chainId, isLite }: Props) => {
             {/* TODO: `linkPoolAddress` is never set */}
             {deploymentStatus.mirror.status === 'SUCCESS' && linkPoolAddress !== '' && (
               <LinkContainer>
-                <Button onClick={() => push(linkPoolAddress)}>{t`Visit the pool`}</Button>
+                <Button href={linkPoolAddress} component={RouterLink}>{t`Visit the pool`}</Button>
               </LinkContainer>
             )}
           </Content>

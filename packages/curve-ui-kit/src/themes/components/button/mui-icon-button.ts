@@ -6,7 +6,6 @@ import { recordEntries } from '@primitives/objects.utils'
 import { handleBreakpoints } from '@ui-kit/themes/basic-theme'
 import { DesignSystem } from '../../design'
 import { SizesAndSpaces } from '../../design/1_sizes_spaces'
-import { Fonts } from '../../fonts'
 import { buttonColor } from './utils'
 
 const { ButtonSize, OutlineWidth, IconSize } = SizesAndSpaces
@@ -32,7 +31,7 @@ const iconButtonSize = (designSize: keyof typeof ButtonSize, muiSize: IconButton
 })
 
 // note: should use IconSize instead of ButtonSize? Plus introduce many more sizes (xs to 4xl)
-export const defineMuiIconButton = ({ Button, Text }: DesignSystem): Components['MuiIconButton'] => {
+export const defineMuiIconButton = ({ Button }: DesignSystem): Components['MuiIconButton'] => {
   const { Primary, Secondary, Success, Error, Outlined, Ghost, Navigation, Focus_Outline, Transition } = Button
   const colors = {
     primary: buttonColor(Primary),
@@ -56,7 +55,6 @@ export const defineMuiIconButton = ({ Button, Text }: DesignSystem): Components[
         ...buttonColor(Ghost),
         transition: Transition,
         ':focus-visible': { borderColor: Focus_Outline },
-        fontFamily: Fonts[Text.FontFamily.Button],
       },
       sizeExtraExtraSmall: iconButtonSize('xxs', 'extraExtraSmall'),
       sizeExtraSmall: iconButtonSize('xs', 'extraSmall'),

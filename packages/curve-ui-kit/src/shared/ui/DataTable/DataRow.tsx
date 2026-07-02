@@ -27,8 +27,6 @@ export type DataRowProps<T extends TableItem> = {
   table: Table<T>
   row: Row<T>
   expandedPanel?: ExpandedPanel<T>
-  isLastRow: boolean
-  shouldStickLastRowToTop?: boolean
   shouldStickFirstColumn?: boolean
   verticalAlign?: 'top' | 'middle' | 'bottom'
 }
@@ -37,8 +35,6 @@ export const DataRow = <T extends TableItem>({
   table,
   row,
   expandedPanel,
-  isLastRow,
-  shouldStickLastRowToTop,
   shouldStickFirstColumn,
   verticalAlign = 'middle',
 }: DataRowProps<T>) => {
@@ -52,7 +48,7 @@ export const DataRow = <T extends TableItem>({
     [url, push, hasUrl],
   )
   const visibleCells = row.getVisibleCells()
-  const shouldApplyStickyLastRow = isLastRow && shouldStickLastRowToTop
+
   return (
     <>
       <InvertOnHover hoverColor={t => t.design.Table.Row.Hover} hoverRef={{ current: element }} disabled={isMobile}>
@@ -80,15 +76,8 @@ export const DataRow = <T extends TableItem>({
                   color: t => t.design.Table.Text.Hover.Secondary,
                 },
               },
-              ...(shouldApplyStickyLastRow && {
-                // to avoid the sticky header showing without any rows, show the last row on top of it
-                position: 'sticky',
-                zIndex: t => t.zIndex.tableStickyLastRow,
-                top: 0,
-                backgroundColor: t => t.design.Table.Row.Default,
-              }),
             }),
-            [shouldApplyStickyLastRow, hasUrl, verticalAlign],
+            [hasUrl, verticalAlign],
           )}
           ref={setElement}
           data-testid={element && `data-table-row-${row.id}`}

@@ -6,7 +6,12 @@ import { BackendMaintenanceBanner } from '@ui-kit/features/maintenance/component
 import type { Maintenance } from '@ui-kit/features/maintenance/hooks/useMaintenance'
 import { usePathname } from '@ui-kit/hooks/router'
 import { useCurrentDate } from '@ui-kit/hooks/useCurrentDate'
-import { useDismissAaveBanner, useDismissCurveLiteBanner, useReleaseChannel } from '@ui-kit/hooks/useLocalStorage'
+import {
+  useDismissAaveBanner,
+  useDismissCurveLiteBanner,
+  useDismissFantomRetirementBanner,
+  useReleaseChannel,
+} from '@ui-kit/hooks/useLocalStorage'
 import { t } from '@ui-kit/lib/i18n'
 import { getCurrentApp } from '@ui-kit/shared/routes'
 import { Banner } from '@ui-kit/shared/ui/Banner'
@@ -34,6 +39,7 @@ export const GlobalBanner = ({ networkId, chainId, backendMaintenance }: GlobalB
   const currentDate = useCurrentDate()
 
   const [showAaveBanner, dismissAaveBanner] = useDismissAaveBanner()
+  const [showFantomRetirementBanner, dismissFantomRetirementBanner] = useDismissFantomRetirementBanner()
   const [showDowngraded, dismissDowngraded] = useDismissCurveLiteBanner(chainId)
 
   return (
@@ -92,6 +98,16 @@ export const GlobalBanner = ({ networkId, chainId, backendMaintenance }: GlobalB
           learnMoreUrl="https://governance.aave.com/t/direct-to-aip-aave-v2-non-ethereum-pools-next-deprecation-steps/22445"
         >
           {t`Aave V2 Frozen aTokens`}
+        </Banner>
+      )}
+      {showFantomRetirementBanner && chainId === +Chain.Fantom && (
+        <Banner
+          severity="alert"
+          subtitle={t`The Fantom chain will be retired at the end of June. Please withdraw from pools.`}
+          onClick={dismissFantomRetirementBanner}
+          learnMoreUrl="https://x.com/SonicLabs/status/2041551455254097988"
+        >
+          {t`Fantom Retirement`}
         </Banner>
       )}
     </StackBanners>

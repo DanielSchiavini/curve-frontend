@@ -1,6 +1,6 @@
 import { t } from '@ui-kit/lib/i18n'
 import { LlamaMarketType } from '@ui-kit/types/market'
-import type { HealthMode } from './llamalend.types'
+import type { SlippageType } from '@ui-kit/widgets/SlippageSettings'
 
 /**
  * Preset options for loan creation
@@ -18,22 +18,6 @@ export const PRESET_RANGES = {
   [LoanPreset.Custom]: 10,
 }
 
-// Enum for the empty state of the user positions table
-export enum PositionsEmptyState {
-  Error = 'error',
-  NoPositions = 'no-positions',
-  Filtered = 'filtered',
-}
-
-export const DEFAULT_HEALTH_MODE: HealthMode = {
-  percent: '',
-  colorKey: '',
-  icon: null,
-  message: null,
-  warningTitle: '',
-  warning: '',
-}
-
 /**
  * Reference cutoff date used to infer and display the Llamalend market version in the UI, until the price API returns the version explicitly.
  */
@@ -46,3 +30,5 @@ export const MarketTypeSuffix: Record<LlamaMarketType, string> = {
 
 export const NET_SUPPLY_RATE_TITLE = t`Net supply APY`
 export const USER_NET_SUPPLY_RATE_TITLE = t`Your net supply APY`
+
+export const LEVERAGE = 'leverage' as const satisfies SlippageType

@@ -1,9 +1,11 @@
-import { useCallback, useMemo } from 'react'
+import { type MouseEventHandler, useCallback, useMemo } from 'react'
 import {
+  RouterHistory,
   useLocation as useTanstackLocation,
   useMatchRoute as useTanstackMatchRoute,
   useNavigate as useTanstackNavigate,
   useParams as useTanstackParams,
+  useRouter as useTanstackRouter,
 } from '@tanstack/react-router'
 import type { ParsedLocation, RegisteredRouter } from '@tanstack/router-core'
 
@@ -52,9 +54,8 @@ export function useSearchNavigate(searchParams: URLSearchParams) {
   const navigate = useNavigate()
   const pathname = usePathname()
   return useCallback(
-    (update: SearchParamsUpdate, options?: NavigateOptions) => {
-      navigate(pathname + getSearchString(update, searchParams), options)
-    },
+    (update: SearchParamsUpdate, options?: NavigateOptions) =>
+      navigate(pathname + getSearchString(update, searchParams), options),
     [navigate, pathname, searchParams],
   )
 }
@@ -81,4 +82,19 @@ export function useMatchRoute<T extends Record<string, string> = Record<string, 
 ): T | false {
   const matchRoute = useTanstackMatchRoute()
   return matchRoute(options) as T | false
+}
+
+export const useGoBack = () => {
+  const { history } = useTanstackRouter() as { history: RouterHistory }
+  return useCallback<MouseEventHandler<HTMLAnchorElement>>(
+    e => {
+      const { canGoBack } = history
+      if (canGoBack()) {
+        e.stopPropagation()
+        e.preventDefault()
+        return history.go(-1)
+      }
+    },
+    [history],
+  )
 }

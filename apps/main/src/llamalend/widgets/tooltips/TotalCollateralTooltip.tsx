@@ -1,23 +1,25 @@
-import { UnavailableNotation, formatMetricValue, formatPercentage } from '@/llamalend/widgets/tooltips/tooltip.utils'
+import { formatMetricValue, formatPercentage, UnavailableNotation } from '@/llamalend/widgets/tooltips/tooltip.utils'
 import {
+  TooltipDescription,
   TooltipItem,
   TooltipItems,
   TooltipWrapper,
-  TooltipDescription,
 } from '@/llamalend/widgets/tooltips/TooltipComponents'
 import { Stack } from '@mui/material'
+import type { Decimal } from '@primitives/decimal.utils'
+import { maybe } from '@primitives/objects.utils'
 import { t } from '@ui-kit/lib/i18n'
-import { formatUsd } from '@ui-kit/utils'
+import { formatNumber } from '@ui-kit/utils'
 
-type TotalCollateralTooltipProps = {
-  collateralSymbol: string | null | undefined
-  totalCollateral: number | null
-  borrowedSymbol: string | null | undefined
-  totalBorrowed: number | null
+type TotalCollateralTooltipProps = Partial<{
+  collateralSymbol: string | null
+  totalCollateral: Decimal
+  borrowedSymbol: string | null
+  totalBorrowed: Decimal
   combinedCollateralUsdValue: number | null
   collateralUsdRate: number | null
   borrowedUsdRate: number | null
-}
+}>
 
 export const TotalCollateralTooltip = ({
   collateralSymbol,
@@ -34,14 +36,11 @@ export const TotalCollateralTooltip = ({
   const borrowValueFormatted = formatMetricValue(totalBorrowed)
   const borrowPercentage = formatPercentage(totalBorrowed, combinedCollateralUsdValue, borrowedUsdRate)
 
-  const totalValueFormatted =
-    combinedCollateralUsdValue != null
-      ? formatUsd(combinedCollateralUsdValue, { abbreviate: false })
-      : UnavailableNotation
-
   return (
     <TooltipWrapper>
-      <TooltipDescription text={t`The total USD value of all collateral assets deposited in this market.`} />
+      <TooltipDescription
+        text={t`The total collateral deposited and converted in this market, all denominated in the collateral token.`}
+      />
       <TooltipDescription text={t`Used as backing for borrowed or minted debt (e.g., crvUSD).`} />
       <TooltipDescription
         text={t`This includes both active positions and collateral currently in the liquidation band (being gradually converted).`}
@@ -61,7 +60,7 @@ export const TotalCollateralTooltip = ({
       </Stack>
 
       <TooltipItem title={t`Total collateral value`} variant="independent">
-        {totalValueFormatted}
+        {maybe(combinedCollateralUsdValue, usd => formatNumber(usd, 'usd.amount')) ?? UnavailableNotation}
       </TooltipItem>
     </TooltipWrapper>
   )

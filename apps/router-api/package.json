@@ -15,7 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "hono": "^4.12.25"
+    "@curvefi/api-server": "*"
   },
   "peerDependencies": {
     "@curvefi/api": "*"
@@ -24,7 +24,7 @@
     "@curvefi/api": "*",
     "@types/node": "*",
     "eslint": "*",
-    "tsx": "4.21.0",
+    "tsx": "4.22.4",
     "typescript": "*",
     "vitest": "*"
   }

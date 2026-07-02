@@ -1,3 +1,4 @@
+import { LEVERAGE } from '@/llamalend/constants'
 import { getHealthValueColor } from '@/llamalend/features/market-position-details'
 import type { MarketRoutes } from '@/llamalend/hooks/useMarketRoutes'
 import { ReturnToWalletActionInfo } from '@/llamalend/widgets/action-card/ReturnToWalletActionInfo'
@@ -12,10 +13,10 @@ import { t } from '@ui-kit/lib/i18n'
 import { ActionInfo, ActionInfoGasEstimate, type TxGasInfo } from '@ui-kit/shared/ui/ActionInfo'
 import { Tooltip } from '@ui-kit/shared/ui/Tooltip'
 import { mapQuery, type QueryProp, type Range } from '@ui-kit/types/util'
-import { decimal, formatNumber, formatPercent } from '@ui-kit/utils'
+import { decimal, formatNumber } from '@ui-kit/utils'
 import { getPriceImpactDisplay } from '@ui-kit/widgets/DetailPageLayout/price-impact.util'
 import { RouteProvidersAccordion } from '@ui-kit/widgets/RouteProvider'
-import { SlippageToleranceActionInfoPure } from '@ui-kit/widgets/SlippageSettings'
+import { SlippageToleranceActionInfo } from '@ui-kit/widgets/SlippageSettings'
 import { ActionInfoCollapse } from './ActionInfoCollapse'
 import { useShouldShowNetRate } from './hooks/useShouldShowNetRate'
 import { ACTION_INFO_GROUP_SX, combineActionInfoState, formatAmount, formatLeverage } from './info-actions.helpers'
@@ -100,7 +101,10 @@ export const LoanActionInfoList = ({
   routes,
 }: LoanActionInfoListProps) => {
   const [isRoutesOpen, , , toggleRoutes] = useSwitch(false)
-  const { label: priceImpactLabel, color: priceImpactColor } = getPriceImpactDisplay(priceImpact, { slippage })
+  const { label: priceImpactLabel, color: priceImpactColor } = getPriceImpactDisplay(priceImpact, {
+    slippage,
+    slippageType: LEVERAGE,
+  })
   const exchangeRateValue = decimal(exchangeRate?.data)
 
   const shouldShowNetBorrowApr = useShouldShowNetRate({
@@ -131,13 +135,13 @@ export const LoanActionInfoList = ({
 
   return (
     <ActionInfoCollapse isOpen={isOpen} testId="loan-action-info-list">
-      <Stack sx={{ ...ACTION_INFO_GROUP_SX }}>
+      <Stack sx={ACTION_INFO_GROUP_SX}>
         <Stack>
           {(rates ?? prevRates) && (
             <ActionInfo
               label={t`Borrow APR`}
-              value={rates?.data?.borrowApr && formatPercent(rates.data.borrowApr)}
-              prevValue={prevRates?.data?.borrowApr && formatPercent(prevRates.data.borrowApr)}
+              value={rates?.data?.borrowApr && formatNumber(rates.data.borrowApr, 'percent.rate')}
+              prevValue={prevRates?.data?.borrowApr && formatNumber(prevRates.data.borrowApr, 'percent.rate')}
               {...combineActionInfoState(rates, prevRates)}
               size="small"
               testId="borrow-apr"
@@ -146,8 +150,8 @@ export const LoanActionInfoList = ({
           {shouldShowNetBorrowApr && (
             <ActionInfo
               label={t`Net borrow APR`}
-              value={netBorrowApr?.data && formatPercent(netBorrowApr.data)}
-              prevValue={prevNetBorrowApr?.data && formatPercent(prevNetBorrowApr.data)}
+              value={netBorrowApr?.data && formatNumber(netBorrowApr.data, 'percent.rate')}
+              prevValue={prevNetBorrowApr?.data && formatNumber(prevNetBorrowApr.data, 'percent.rate')}
               {...combineActionInfoState(netBorrowApr, prevNetBorrowApr)}
               size="small"
               testId="borrow-net-apr"
@@ -178,8 +182,8 @@ export const LoanActionInfoList = ({
                   <span>{t`LTV`}</span>
                 </Tooltip>
               }
-              value={loanToValue?.data && formatPercent(loanToValue.data)}
-              prevValue={prevLoanToValue?.data && formatPercent(prevLoanToValue.data)}
+              value={loanToValue?.data && formatNumber(loanToValue.data, 'percent.rate')}
+              prevValue={prevLoanToValue?.data && formatNumber(prevLoanToValue.data, 'percent.rate')}
               {...combineActionInfoState(loanToValue, prevLoanToValue)}
               size="small"
               testId="borrow-ltv"
@@ -265,12 +269,17 @@ export const LoanActionInfoList = ({
 
       <Stack>
         {slippage && onSlippageChange && (
-          <SlippageToleranceActionInfoPure maxSlippage={slippage} onSave={onSlippageChange} size="small" />
+          <SlippageToleranceActionInfo
+            maxSlippage={slippage}
+            type={LEVERAGE}
+            onChanged={({ leverage }) => onSlippageChange(leverage)}
+            size="small"
+          />
         )}
         {priceImpact && (
           <ActionInfo
             label={priceImpactLabel}
-            value={priceImpact.data == null ? '-' : formatPercent(priceImpact.data)}
+            value={priceImpact.data == null ? '-' : formatNumber(priceImpact.data, 'percent.rate')}
             valueColor={priceImpactColor}
             error={priceImpact.error}
             loading={priceImpact.isLoading}

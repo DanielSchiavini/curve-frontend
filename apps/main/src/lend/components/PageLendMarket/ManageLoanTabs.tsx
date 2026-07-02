@@ -1,161 +1,81 @@
-import { LoanBorrowMore } from '@/lend/components/PageLendMarket/LoanBorrowMore'
-import { LoanCollateralAdd } from '@/lend/components/PageLendMarket/LoanCollateralAdd'
-import { LoanCollateralRemove } from '@/lend/components/PageLendMarket/LoanCollateralRemove'
-import { LoanRepay } from '@/lend/components/PageLendMarket/LoanRepay'
-import { LoanSelfLiquidation } from '@/lend/components/PageLendMarket/LoanSelfLiquidation'
 import { networks } from '@/lend/networks'
-import { type MarketUrlParams, PageContentProps } from '@/lend/types/lend.types'
 import { AddCollateralForm } from '@/llamalend/features/manage-loan/components/AddCollateralForm'
 import { BorrowMoreForm } from '@/llamalend/features/manage-loan/components/BorrowMoreForm'
 import { RemoveCollateralForm } from '@/llamalend/features/manage-loan/components/RemoveCollateralForm'
 import { RepayForm } from '@/llamalend/features/manage-loan/components/RepayForm'
 import { ClosePositionForm } from '@/llamalend/features/manage-soft-liquidation/ui/tabs/ClosePositionForm'
 import { ImproveHealthForm } from '@/llamalend/features/manage-soft-liquidation/ui/tabs/ImproveHealthForm'
+import { ResetPositionForm } from '@/llamalend/features/manage-soft-liquidation/ui/tabs/ResetPositionForm'
+import { useMarketContext } from '@/llamalend/features/market-context'
 import { useLiquidationStatus } from '@/llamalend/features/market-position-details/hooks/useUserLiquidationStatus'
 import type { UserCollateralEvents } from '@/llamalend/features/user-position-history/hooks/useUserCollateralEvents'
-import type { Decimal } from '@primitives/decimal.utils'
-import { useLoanImplementationKey, useManageLoanMuiForm, useManageSoftLiquidation } from '@ui-kit/hooks/useFeatureFlags'
+import { hasResetPosition } from '@/llamalend/llama.utils'
+import { Decimal } from '@primitives/decimal.utils'
+import { useLlamaResetPosition, useLoanImplementationKey } from '@ui-kit/hooks/useFeatureFlags'
 import { t } from '@ui-kit/lib/i18n'
 import type { QueryProp, Range } from '@ui-kit/types/util'
 import { type FormTab, FormTabs } from '@ui-kit/widgets/DetailPageLayout/FormTabs'
 
-type ManageLoanProps = PageContentProps<MarketUrlParams> & {
+type LendManageLoanProps = {
   onPricesUpdated: (prices: Range<Decimal> | undefined) => void
   collateralEvents: QueryProp<UserCollateralEvents>
 }
 
-const LendManageLegacyMenu = [
-  {
-    value: 'loan',
-    label: t`Loan`,
-    subTabs: [
-      { value: 'loan-increase', label: t`Borrow more`, component: LoanBorrowMore },
-      { value: 'loan-decrease', label: t`Repay`, component: LoanRepay },
-      { value: 'loan-liquidate', label: t`Self-liquidate`, component: LoanSelfLiquidation },
-    ],
-  },
-  {
-    value: 'collateral',
-    label: t`Collateral`,
-    subTabs: [
-      { value: 'collateral-increase', label: t`Add collateral`, component: LoanCollateralAdd },
-      { value: 'collateral-decrease', label: t`Remove collateral`, component: LoanCollateralRemove },
-    ],
-  },
-  {
-    value: 'leverage',
-    label: t`Leverage`,
-    visible: ({ market }) => market?.leverage?.hasLeverage(),
-    component: props => <LoanBorrowMore {...props} isLeverage />,
-  },
-] satisfies FormTab<ManageLoanProps>[]
+type LendManageLoanTab = FormTab<LendManageLoanProps>
+type LendManageLoanSubTab = NonNullable<LendManageLoanTab['subTabs']>[number]
 
-const LendManageNewMenu = [
-  {
-    value: 'loan-increase',
-    label: t`Borrow`,
-    component: ({ rChainId: chainId, market, isLoaded, onPricesUpdated, collateralEvents }: ManageLoanProps) => (
-      <BorrowMoreForm
-        networks={networks}
-        chainId={chainId}
-        market={market}
-        onPricesUpdated={onPricesUpdated}
-        enabled={isLoaded}
-        collateralEvents={collateralEvents}
-      />
-    ),
-  },
-  {
-    value: 'loan-decrease',
-    label: t`Repay`,
-    component: ({ rChainId: chainId, market, isLoaded, onPricesUpdated, collateralEvents }: ManageLoanProps) => (
-      <RepayForm
-        networks={networks}
-        chainId={chainId}
-        market={market}
-        onPricesUpdated={onPricesUpdated}
-        enabled={isLoaded}
-        collateralEvents={collateralEvents}
-      />
-    ),
-  },
+const LendManageMenu = [
+  { value: 'loan-increase', label: t`Borrow`, component: props => <BorrowMoreForm networks={networks} {...props} /> },
+  { value: 'loan-decrease', label: t`Repay`, component: props => <RepayForm networks={networks} {...props} /> },
   {
     value: 'collateral',
     label: t`Collateral`,
     subTabs: [
-      {
-        value: 'add',
-        label: t`Add`,
-        component: ({ rChainId: chainId, market, isLoaded, onPricesUpdated }: ManageLoanProps) => (
-          <AddCollateralForm
-            networks={networks}
-            chainId={chainId}
-            market={market}
-            enabled={isLoaded}
-            onPricesUpdated={onPricesUpdated}
-          />
-        ),
-      },
+      { value: 'add', label: t`Add`, component: props => <AddCollateralForm networks={networks} {...props} /> },
       {
         value: 'remove',
         label: t`Remove`,
-        component: ({ rChainId: chainId, market, isLoaded, onPricesUpdated }: ManageLoanProps) => (
-          <RemoveCollateralForm
-            networks={networks}
-            chainId={chainId}
-            market={market}
-            enabled={isLoaded}
-            onPricesUpdated={onPricesUpdated}
-          />
-        ),
+        component: props => <RemoveCollateralForm networks={networks} {...props} />,
       },
     ],
   },
-] satisfies FormTab<ManageLoanProps>[]
+] satisfies LendManageLoanTab[]
 
-const LendManageSoftLiquidationMenu = [
-  {
-    value: 'soft-liquidation',
-    label: t`Manage soft liquidation`,
-    subTabs: [
-      {
-        value: 'improve-health',
-        label: t`Improve health`,
-        component: ({ rChainId: chainId, market, isLoaded, collateralEvents }: ManageLoanProps) => (
-          <ImproveHealthForm
-            chainId={chainId}
-            market={market}
-            networks={networks}
-            enabled={isLoaded}
-            collateralEvents={collateralEvents}
-          />
-        ),
-      },
-      {
-        value: 'close-position',
-        label: t`Close`,
-        component: ({ rChainId: chainId, market, isLoaded }: ManageLoanProps) => (
-          <ClosePositionForm chainId={chainId} networks={networks} market={market} enabled={isLoaded} />
-        ),
-      },
-    ],
-  },
-] satisfies FormTab<ManageLoanProps>[]
+const createResetSoftLiquidationTab = (visible: boolean) =>
+  ({
+    value: 'reset',
+    label: t`Reset`,
+    visible,
+    component: props => <ResetPositionForm networks={networks} {...props} />,
+  }) satisfies LendManageLoanSubTab
 
-export const ManageLoanTabs = (params: ManageLoanProps) => {
-  const status = useLiquidationStatus({
-    chainId: params.rChainId,
-    marketId: params.marketId,
-    userAddress: params.userAddress,
-  })
-  const shouldUseSoftLiquidation =
-    useManageSoftLiquidation() && status.data && ['softLiquidation', 'hardLiquidation'].includes(status.data)
-  const shouldUseManageLoanMuiForm = useManageLoanMuiForm()
-  const menu = shouldUseSoftLiquidation
-    ? LendManageSoftLiquidationMenu
-    : shouldUseManageLoanMuiForm
-      ? LendManageNewMenu
-      : LendManageLegacyMenu
-  const key = useLoanImplementationKey()
-  return <FormTabs key={key} params={params} menu={menu} shouldWrap={menu === LendManageLegacyMenu} />
+const CloseSoftLiquidationTab = {
+  value: 'close-position',
+  label: t`Close`,
+  component: props => <ClosePositionForm networks={networks} {...props} />,
+} satisfies LendManageLoanSubTab
+
+const ImproveHealthSoftLiquidationTab = {
+  value: 'improve-health',
+  label: t`Improve health`,
+  component: props => <ImproveHealthForm networks={networks} {...props} />,
+} satisfies LendManageLoanSubTab
+
+const createSoftLiqMenu = (showReset: boolean) =>
+  [
+    {
+      value: 'soft-liquidation',
+      label: t`Manage soft liquidation`,
+      subTabs: [createResetSoftLiquidationTab(showReset), CloseSoftLiquidationTab, ImproveHealthSoftLiquidationTab],
+    },
+  ] satisfies LendManageLoanTab[]
+
+export const ManageLoanTabs = (params: LendManageLoanProps) => {
+  const { chainId, marketId, userAddress, market } = useMarketContext()
+  const { data: status } = useLiquidationStatus({ chainId, marketId, userAddress })
+  const isSoftLiquidation = ['softLiquidation', 'hardLiquidation'].includes(status ?? '')
+  const showResetPosition = useLlamaResetPosition() && hasResetPosition(market)
+  const menu = isSoftLiquidation ? createSoftLiqMenu(showResetPosition) : LendManageMenu
+
+  return <FormTabs key={useLoanImplementationKey()} params={params} menu={menu} />
 }

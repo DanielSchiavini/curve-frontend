@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react'
 import { enforce, test } from 'vest'
 import type { TGas } from '@curvefi/llamalend-api/lib/interfaces'
+import type { Address } from '@primitives/address.utils'
 import { toArray } from '@primitives/array.utils'
 import { fetchJson } from '@primitives/fetch.utils'
 import { assert, notFalsy, maybe } from '@primitives/objects.utils'
 import { type RouteProvider, RouteProviders, type RouterRouteResponse } from '@primitives/router.utils'
 import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query'
 import { createHash } from '@ui-kit/entities/router-api/router-api.utils'
+import { use0xRouter } from '@ui-kit/hooks/useFeatureFlags'
 import { createValidationSuite, type FieldsOf } from '@ui-kit/lib'
 import { queryFactory } from '@ui-kit/lib/model/query'
 import { NoRetryError } from '@ui-kit/lib/model/query/factory'
@@ -18,7 +20,11 @@ import { routerApiValidation } from './router-api.validation'
 type RouteByIdQuery = { routeId: string }
 type RouteByIdParams = FieldsOf<RouteByIdQuery>
 
-const { getQueryData: getRouteQueryData, setQueryData: setRouteQueryData } = queryFactory({
+const {
+  getQueryData: getRouteQueryData,
+  setQueryData: setRouteQueryData,
+  useQuery: useRouteByIdQuery,
+} = queryFactory({
   queryKey: ({ routeId }: RouteByIdParams) => ['router-api', 'v1/routes', { routeId }] as const,
   // eslint-disable-next-line @typescript-eslint/require-await -- Existing violation before enabling this rule.
   queryFn: async (_params: RouteByIdQuery): Promise<RouteResponse> => {
@@ -32,6 +38,13 @@ const { getQueryData: getRouteQueryData, setQueryData: setRouteQueryData } = que
   disableLog: true,
   category: 'global.routerApi',
 })
+
+/**
+ * Keeps the selected route-by-id cache entry active while a form references it.
+ * The route-by-id query is write-through only, so this hook must never enable fetching.
+ * A disabled useQuery still creates/subscribes an observer for that queryKey; it just does not auto-fetch.
+ */
+export const usePinRouteById = (routeId: string | undefined) => useRouteByIdQuery({ routeId }, false)
 
 /**
  * Returns a previously fetched router route from a local query-cache entry keyed by `routeId`.
@@ -54,7 +67,17 @@ export const getRouteById = (routeId: string | undefined) =>
   )
 
 const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
-  queryKey: ({ chainId, tokenIn, tokenOut, amountIn, amountOut, router, userAddress, slippage }: RoutesParams) =>
+  queryKey: ({
+    chainId,
+    tokenIn,
+    tokenOut,
+    amountIn,
+    amountOut,
+    blacklist,
+    router,
+    userAddress,
+    slippage,
+  }: RoutesParams) =>
     [
       'router-api',
       'v1/routes',
@@ -63,6 +86,7 @@ const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
       { tokenOut },
       { amountIn },
       { amountOut },
+      { blacklist },
       { router },
       { userAddress },
       { slippage },
@@ -73,6 +97,7 @@ const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
     tokenOut,
     amountIn,
     amountOut,
+    blacklist,
     router,
     userAddress,
     slippage,
@@ -89,6 +114,7 @@ const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
       ),
     )
 
+    toArray(blacklist).forEach(address => query.append('blacklist', address))
     toArray(router).forEach(router => query.append('router', router))
     const routes = await fetchJson<RouterRouteResponse[]>(`/api/router/v1/routes?${query}`)
     return await Promise.all(
@@ -99,6 +125,7 @@ const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
           tokenIn,
           tokenOut,
           amountIn,
+          toArray(blacklist),
           slippage,
           userAddress,
           amountOut,
@@ -114,10 +141,13 @@ const { useQuery: useRouterApi, fetchQuery: fetchApiRoutes } = queryFactory({
   category: 'global.routerApi',
 })
 
-function useRouterQuery(params: Omit<RoutesParams, 'router'>, router: RouteProvider, enabled?: boolean): RouteQuery {
+function useRouterQuery(params: Omit<RoutesParams, 'router'>, router: RouteProvider, enabled = true): RouteQuery {
   const { data, isLoading, error, isFetching } = useRouterApi({ ...params, router }, enabled)
   const route = maybe(data, ([route = null]) => route)
-  return useMemo(() => ({ ...q({ isLoading, data: route, error }), isFetching }), [isLoading, route, error, isFetching])
+  return useMemo(
+    () => ({ ...q({ isLoading, data: route, error }), isFetching, enabled }),
+    [isLoading, route, error, isFetching, enabled],
+  )
 }
 
 export type GetGasCallback<TData extends TGas | null = TGas, TKey extends QueryKey = QueryKey> = (
@@ -128,10 +158,13 @@ export type GetGasCallback<TData extends TGas | null = TGas, TKey extends QueryK
  * Calls the route providers in parallel, returning the first route of each.
  */
 export const useRouterQueries = <TData extends TGas | null, TKey extends QueryKey>(
-  params: Omit<RoutesParams, 'router'>,
+  { zapAddress, ...params }: Omit<RoutesParams, 'router'> & { zapAddress: Address | undefined },
   getRouteGasOptions: GetGasCallback<TData, TKey>,
   enabled?: boolean,
-) => {
+): {
+  queries: RouteQueries
+  onRefresh: () => Promise<RouteResponse[][]>
+} => {
   const curveRoutes = useRouterQuery(params, 'curve', enabled)
   const { data: gas } = useQuery({
     ...getRouteGasOptions(curveRoutes.data?.id),
@@ -149,9 +182,11 @@ export const useRouterQueries = <TData extends TGas | null, TKey extends QueryKe
             : curveRoutes,
         [curveRoutes, gas],
       ),
-      enso: useRouterQuery(params, 'enso', enabled),
-      odos: useRouterQuery(params, 'odos', enabled),
-    } satisfies RouteQueries,
+      'curve-solver': useRouterQuery({ ...params, userAddress: zapAddress }, 'curve-solver', enabled),
+      enso: useRouterQuery({ ...params, userAddress: zapAddress }, 'enso', !!zapAddress && enabled),
+      odos: useRouterQuery({ ...params, userAddress: zapAddress }, 'odos', !!zapAddress && enabled),
+      '0x': useRouterQuery({ ...params, userAddress: zapAddress }, '0x', use0xRouter() && enabled),
+    },
     onRefresh: useCallback(
       () => Promise.all(RouteProviders.map(router => fetchApiRoutes({ ...params, router }))),
       [params],

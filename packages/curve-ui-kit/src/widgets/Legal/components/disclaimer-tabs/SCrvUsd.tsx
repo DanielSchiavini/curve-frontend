@@ -1,12 +1,13 @@
 import Box from '@mui/material/Box'
-import Link from '@mui/material/Link'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import { EXTERNAL_LINKS } from '@ui/utils'
 import { getSearchString } from '@ui-kit/hooks/router'
 import { t } from '@ui-kit/lib/i18n'
 import { ExternalLink } from '@ui-kit/shared/ui/ExternalLink'
 import { RouterLink } from '@ui-kit/shared/ui/RouterLink'
 import { SizesAndSpaces } from '@ui-kit/themes/design/1_sizes_spaces'
+import { LegalExternalLink } from '../general/LegalExternalLink'
 import { List } from '../general/List'
 import { Header, Paragraph, Section } from '../general/Section'
 import { LegalIntro } from './LegalIntro'
@@ -29,11 +30,8 @@ export const SCrvUsd = () => (
       }}
       sx={{ gap: Spacing.md, marginInline: Spacing.md }}
     >
-      <ExternalLink href="https://docs.curve.finance/scrvusd/overview/" label={t`scrvUSD protocol docs`} />
-      <ExternalLink
-        href="https://docs.curve.finance/assets/pdf/ChainSecurity_Curve_scrvUSD_audit.pdf"
-        label={t`scrvUSD smart contract audits`}
-      />
+      <ExternalLink href={EXTERNAL_LINKS.docs.scrvUsd.overview} label={t`scrvUSD protocol docs`} />
+      <ExternalLink href={EXTERNAL_LINKS.docs.assets.scrvUsdAudit} label={t`scrvUSD smart contract audits`} />
     </Stack>
 
     <Header>{t`crvUSD Dependency`}</Header>
@@ -66,9 +64,7 @@ export const SCrvUsd = () => (
 
           <Box component="li">
             <Typography variant="bodyMBold" component="span">
-              <Link color="textSecondary" href="https://docs.curve.finance/crvUSD/pegkeepers/overview/" target="_blank">
-                {t`PegKeeper Dependency:`}
-              </Link>
+              <LegalExternalLink link="docs.crvUsd.pegKeepers">{t`PegKeeper Dependency:`}</LegalExternalLink>
               {': '}
             </Typography>
 
@@ -107,14 +103,10 @@ export const SCrvUsd = () => (
     <Section>
       <Paragraph>
         {t`To obtain scrvUSD, users deposit crvUSD into a Savings Vault which make use of`}{' '}
-        <Link color="textSecondary" href="https://docs.yearn.fi/developers/v3/overview" target="_blank">
-          {t`Yearn V3 vaults`}
-        </Link>
+        <LegalExternalLink link="docs.yearn.v3Vaults">{t`Yearn V3 vaults`}</LegalExternalLink>
         {'. '}
         {t`While Yearn vaults have undergone extensive`}{' '}
-        <Link color="textSecondary" href="https://github.com/yearn/yearn-vaults-v3/tree/master/audits" target="_blank">
-          {t`audits`}
-        </Link>{' '}
+        <LegalExternalLink link="github.yearnVaultsV3Audits">{t`audits`}</LegalExternalLink>{' '}
         {t`and demonstrated resilience and security, users should be aware of the technical risks associated with interacting with smart contracts.`}
       </Paragraph>
 

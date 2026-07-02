@@ -20,6 +20,7 @@ export const RPC = {
   999: ['https://rpc.hyperliquid.xyz/evm', 'https://rpc.hypurrscan.io'],
   1284: ['https://moonbeam.public.blastapi.io'],
   2222: ['https://evm.kava.io'],
+  4663: ['https://rpc.mainnet.chain.robinhood.com'],
   5000: ['https://rpc.mantle.xyz'],
   6342: ['https://carrot.megaeth.com/rpc'],
   8091: ['https://stratareth3666f0713.devnet-annapurna.stratabtc.org'],

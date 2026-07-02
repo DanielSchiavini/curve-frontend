@@ -1,18 +1,28 @@
-import { useLLv2 } from 'curve-ui-kit/src/hooks/useFeatureFlags'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useCurve } from '@ui-kit/features/connect-wallet'
+import { useLLv2 } from '@ui-kit/hooks/useFeatureFlags'
+import { t } from '@ui-kit/lib/i18n'
+import { useMappedQuery } from '@ui-kit/types/util'
 import { useLendMarkets } from '../queries/lend-markets.query'
 import { ChainId } from '../types/lend.types'
 
-export function useLendMarketData(chainId: ChainId, rMarket: string, enabled?: boolean) {
-  const { data, error, isSuccess } = useLendMarkets({ chainId, enableLLv2: useLLv2() }, enabled)
-  const marketData = useMemo(() => data?.[rMarket], [data, rMarket])
-  return { error, isSuccess, data: marketData }
+export function useLendMarketData(chainId: ChainId, marketId: string, enabled?: boolean) {
+  const lendMarkets = useLendMarkets({ chainId, enableLLv2: useLLv2() }, enabled)
+  const lendMarket = useMappedQuery(
+    lendMarkets,
+    useCallback(data => data?.[marketId], [marketId]),
+  )
+  const error = useMemo(
+    () => lendMarkets.data && !lendMarket.data && new Error(`${t`Market`} ${marketId} ${t`Not Found`}`),
+    [lendMarket.data, lendMarkets.data, marketId],
+  )
+  return { ...lendMarket, ...(error && { error }) }
 }
 
-export const useLendMarket = (chainId: ChainId, rMarket: string, enabled?: boolean) => {
+export const useLendMarket = ({ rMarket, chainId }: { chainId: ChainId; rMarket: string }, enabled?: boolean) => {
   const { llamaApi: api } = useCurve()
-  const { data, error, isSuccess } = useLendMarketData(chainId, rMarket, enabled)
-  const market = useMemo(() => api && data && api.getLendMarketByData(data.id, data), [api, data])
-  return { data: market, error, isSuccess: isSuccess && !!api }
+  return useMappedQuery(
+    useLendMarketData(chainId, rMarket, enabled),
+    useCallback(data => api && data && api.getLendMarketByData(data.id, data), [api]),
+  )
 }

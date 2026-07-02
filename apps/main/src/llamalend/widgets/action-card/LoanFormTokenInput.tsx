@@ -5,7 +5,7 @@ import type { INetworkName } from '@curvefi/llamalend-api/lib/interfaces'
 import type { Address } from '@primitives/address.utils'
 import type { Decimal } from '@primitives/decimal.utils'
 import type { PartialRecord } from '@primitives/objects.utils'
-import { type FormUpdates, FieldPath, FieldPathByValue, FieldValues, UseFormReturn } from '@ui-kit/features/forms'
+import { FieldPath, FieldPathByValue, FieldValues, type FormUpdates, UseFormReturn } from '@ui-kit/features/forms'
 import { useTokenBalance } from '@ui-kit/hooks/useTokenBalance'
 import { useTokenUsdRate } from '@ui-kit/lib/model/entities/token-usd-rate'
 import { LlamaIcon } from '@ui-kit/shared/icons/LlamaIcon'
@@ -29,10 +29,11 @@ export type LoanFormTokenInputProps<
    * Optional max-value query for this field, including loading and error state.
    * When present, it also carries an optional related max-field name whose errors should be reflected here.
    */
-  max?: QueryProp<Decimal> & { fieldName?: TMaxFieldName }
+  max?: QueryProp<Decimal> & { fieldName: TMaxFieldName }
   name: TFieldName
   form: UseFormReturn<TFieldValues> // the form, used to set the value and get errors
   testId: string
+  message?: LargeTokenInputProps['message']
   maxMessage?: ReactNode
   /**
    * Optional, displays the position balance instead of the wallet balance.
@@ -52,6 +53,7 @@ export type LoanFormTokenInputProps<
    * Called after the form value is set.
    */
   onValueChange?: (value: Decimal | undefined) => void
+  disabled?: boolean
 }
 
 /**
@@ -73,12 +75,14 @@ export const LoanFormTokenInput = <
     formState: { errors: formErrors, touchedFields },
   },
   testId,
+  message,
   maxMessage,
   network,
   positionBalance,
   tokenSelector,
   hideBalance,
   onValueChange,
+  disabled,
 }: LoanFormTokenInputProps<TFieldValues, TFieldName, TMaxFieldName>) => {
   const { address: userAddress } = useConnection()
   const {
@@ -144,8 +148,10 @@ export const LoanFormTokenInput = <
       {...(!hideBalance && { walletBalance })}
       maxBalance={max && { balance: max.data, chips: 'range', isLoading: max.isLoading }}
       inputBalanceUsd={decimal(usdRate && usdRate * +(value ?? 0))}
+      message={errorMessage ? undefined : message}
+      disabled={disabled}
     >
-      {maxMessage && <HelperMessage onNumberClick={onBalance} message={maxMessage} />}
+      {maxMessage && !errorMessage && <HelperMessage onNumberClick={onBalance} message={maxMessage} />}
       {errorMessage && <HelperMessage message={errorMessage} onNumberClick={onBalance} isError />}
     </LargeTokenInput>
   )

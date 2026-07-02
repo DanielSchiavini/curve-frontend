@@ -53,18 +53,16 @@ export const OhlcAndActivityComp = ({
         {tab === 'events' && (
           <ActivityTable
             table={liquidityTable.table}
-            isLoading={liquidityTable.isLoading}
-            isError={liquidityTable.isError}
-            emptyMessage={liquidityTable.emptyMessage}
+            emptyState={liquidityTable.emptyState}
+            errorState={liquidityTable.errorState}
             expandedPanel={PoolLiquidityExpandedPanel}
           />
         )}
         {tab === 'trades' && (
           <ActivityTable
             table={tradesTable.table}
-            isLoading={tradesTable.isLoading}
-            isError={tradesTable.isError}
-            emptyMessage={tradesTable.emptyMessage}
+            emptyState={tradesTable.emptyState}
+            errorState={tradesTable.errorState}
             expandedPanel={PoolTradesExpandedPanel}
           />
         )}

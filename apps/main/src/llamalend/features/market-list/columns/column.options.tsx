@@ -54,6 +54,12 @@ const createLlamaMarketsColumnOptions = ({
         enabled: true,
       },
       {
+        label: t`Solvency`,
+        columns: [LlamaMarketColumnId.SolvencyPercent],
+        active: false,
+        enabled: true,
+      },
+      {
         label: t`Total Debt`,
         columns: [LlamaMarketColumnId.TotalDebt],
         active: false,
@@ -79,13 +85,13 @@ const createLlamaMarketsColumnOptions = ({
       {
         label: t`Net borrow APR`,
         columns: [LlamaMarketColumnId.NetBorrowRate],
-        active: false,
+        active: onlyPositions != MarketRateType.Supply,
         enabled: true,
       },
       {
         label: t`Borrow APR`,
         columns: [LlamaMarketColumnId.BorrowRate],
-        active: onlyPositions != MarketRateType.Supply,
+        active: false,
         enabled: true,
       },
       {

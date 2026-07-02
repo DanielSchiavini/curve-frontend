@@ -6,10 +6,12 @@ export * from './env'
 export * from './web3'
 export * from './network'
 export * from './number'
+export * from './pagination'
 export * from './decimal'
 export * from './mui'
 export * from './errors'
 export * from './average-categories'
+export * from './rates'
 
 /**
  * Copies text to clipboard with Ethereum address checksumming

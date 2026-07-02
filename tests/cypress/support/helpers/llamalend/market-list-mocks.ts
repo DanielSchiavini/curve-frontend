@@ -12,13 +12,17 @@ import { mockTokenPrices } from '../tokens'
 /**
  * To make sure our tests do not depend on real APIs, we just block them.
  */
-export const blockUnmockedLlamaMarketApis = () =>
-  ['prices.curve.finance', 'api.curve.finance', 'api.merkl.xyz'].forEach(
+export const blockUnmockedLlamaMarketApis = () => {
+  ;['prices.curve.finance', 'api.curve.finance', 'api.merkl.xyz'].forEach(
     hostname =>
       void cy.intercept({ hostname }, req =>
         req.reply({ statusCode: 503, body: { error: `Unexpected API request in Cypress test: ${req.url}` } }),
       ),
   )
+  cy.intercept('/api/merkl/*', req =>
+    req.reply({ statusCode: 503, body: { error: `Unexpected API request in Cypress test: ${req.url}` } }),
+  )
+}
 
 /** The cypress-wagmi-test-connector generates a fresh address at runtime, so we have to mock by pattern. */
 export const mockEmptyLlamaMarketUserData = () =>
@@ -44,10 +48,17 @@ export const mockEmptyLlamaMarketBadDebt = () =>
     cy.intercept({ method: 'GET', pathname, query: { fetch_on_chain: 'true' } }, { body: { data: [] } }),
   )
 
+const mockEmptyCrvUsdAmms = () =>
+  cy.intercept(
+    { method: 'GET', pathname: '/api/getVolumes/ethereum/crvusd-amms' },
+    { body: { success: true, data: { amms: [], totalVolume: 0 }, generatedTimeMs: Date.now() } },
+  )
+
 export function setupLlamalendListMocks(vaultData = createLendingVaultChainsResponse()) {
   blockUnmockedLlamaMarketApis()
   mockEmptyLlamaMarketUserData()
   mockEmptyLlamaMarketBadDebt()
+  mockEmptyCrvUsdAmms()
   mockTokenPrices()
   const lendingVaults = mockLendingVaults(vaultData)
   mockLendingSnapshots().as('lend-snapshots')

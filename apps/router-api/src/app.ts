@@ -1,5 +1,5 @@
-import { Hono } from 'hono'
 import { z } from 'zod/v4'
+import { createApiServer, jsonResponse, validationError } from '@curvefi/api-server'
 import { RouteProviders } from '@primitives/router.utils'
 import { logger } from './logger'
 import { getRoutes } from './routes/routes'
@@ -36,15 +36,6 @@ const querySchema = z
   })
   .strict()
 
-const health = (env: RouterApiEnv) => ({
-  status: 'ok',
-  service: env.SERVICE_NAME || 'router-api',
-  environment: env.NODE_ENV || 'production',
-  version: env.npm_package_version || '0.0.1',
-  uptime: process.uptime(),
-  timestamp: new Date().toISOString(),
-})
-
 type SerializedError = {
   name?: string
   message: string
@@ -62,25 +53,7 @@ const errorObject = (error: Error): SerializedError => ({
   cause: errorDetails(error.cause),
 })
 
-const validationError = (error: z.ZodError) => ({
-  statusCode: 400,
-  code: 'FST_ERR_VALIDATION',
-  error: 'Bad Request',
-  message: z.prettifyError(error),
-})
-
-const jsonReplacer = (_key: string, value: unknown) => (typeof value === 'bigint' ? value.toString() : value)
-
-const jsonResponse = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body, jsonReplacer), {
-    status,
-    headers: { 'content-type': 'application/json; charset=UTF-8' },
-  })
-
-export const app = new Hono<{ Bindings: RouterApiEnv }>()
-
-app.get('/health', c => jsonResponse(health({ ...process.env, ...c.env })))
-app.get('/api/health', c => jsonResponse(health({ ...process.env, ...c.env })))
+export const app = createApiServer<RouterApiEnv>({ serviceName: 'router-api' })
 
 app.get(RoutesPath, async ({ env: bindings, req }) => {
   const start = Date.now()

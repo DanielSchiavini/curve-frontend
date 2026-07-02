@@ -11,6 +11,7 @@ import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { EXTERNAL_LINKS } from '@ui/utils'
 import { FormProvider } from '@ui-kit/features/forms'
 import { usePinataJwt } from '@ui-kit/hooks/useLocalStorage'
 import { t } from '@ui-kit/lib/i18n'
@@ -51,12 +52,12 @@ export const CreateVoteModal = ({ isOpen, onClose }: CreateVoteModalProps) => {
       compact
       open={isOpen}
       onClose={onClose}
+      formProps={{ onSubmit }}
       footer={
         <Button
           fullWidth
           color="primary"
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises -- Existing violation before enabling this rule.
-          onClick={onSubmit}
+          type="submit"
           disabled={isDisabled}
           loading={isPending}
           data-testid="create-gauge-vote-submit"
@@ -66,14 +67,13 @@ export const CreateVoteModal = ({ isOpen, onClose }: CreateVoteModalProps) => {
       }
     >
       <FormProvider {...form}>
-        {/* eslint-disable-next-line @typescript-eslint/no-misused-promises -- Existing violation before enabling this rule. */}
-        <Stack component="form" spacing={Spacing.lg} onSubmit={onSubmit}>
+        <Stack spacing={Spacing.lg}>
           <Stack spacing={Spacing.xs}>
             <Typography variant="bodySBold">{t`Requirements:`}</Typography>
 
             <Typography variant="bodySRegular">
               {t`1. New gauge votes are encouraged to have a proposal on the governance forum`}{' '}
-              <InlineLink to="https://gov.curve.finance/" hideIcon>{t`at this address`}</InlineLink>
+              <InlineLink to={EXTERNAL_LINKS.curve.gov} hideIcon>{t`at this address`}</InlineLink>
             </Typography>
 
             <Typography variant="bodySRegular">

@@ -1,16 +1,24 @@
+import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { FireIcon } from '@ui-kit/shared/icons/FireIcon'
-import { Metric, SIZES, ALIGNMENTS } from '../Metric'
+import { SizesAndSpaces } from '@ui-kit/themes/design/1_sizes_spaces'
+import { constQ, q } from '@ui-kit/types/util'
+import { borderStyle } from '@ui-kit/utils/mui'
+import { ALIGNMENTS, Metric } from '../Metric'
+import { METRIC_CATEGORIES } from '../metric-categories'
+
+const { Spacing } = SizesAndSpaces
+const CATEGORIES = Object.keys(METRIC_CATEGORIES)
 
 const meta: Meta<typeof Metric> = {
   title: 'UI Kit/Widgets/Metric',
   component: Metric,
   argTypes: {
-    size: {
+    category: {
       control: 'select',
-      options: SIZES,
-      description: 'The size of the component',
+      options: CATEGORIES,
+      description: 'The category that controls responsive size and orientation',
     },
     alignment: {
       control: 'select',
@@ -30,7 +38,7 @@ const meta: Meta<typeof Metric> = {
       description: 'Optional tooltip shown when hovering the metric value',
     },
     value: {
-      control: 'number',
+      control: 'object',
       description: 'The value of the component',
     },
     valueOptions: {
@@ -45,9 +53,10 @@ const meta: Meta<typeof Metric> = {
       control: 'object',
       description: 'Optional notional values that gives context or underlying value of the key metric',
     },
-    error: {
-      control: 'object',
-      description: 'Pass an Error object to show the error icon and hide the metric value row content',
+    icon: {
+      control: false,
+      description:
+        'Optional icon shown after the value in vertical orientation and before the label in horizontal orientation',
     },
     errorTooltip: {
       control: 'object',
@@ -55,9 +64,9 @@ const meta: Meta<typeof Metric> = {
     },
   },
   args: {
-    size: 'medium',
+    category: 'storybook.metric.standard',
     alignment: 'start',
-    value: 26539422,
+    value: constQ(26539422),
     valueOptions: {
       decimals: 1,
       unit: 'dollar',
@@ -66,10 +75,18 @@ const meta: Meta<typeof Metric> = {
     label: 'Metrics label',
     copyText: 'Copied metric value',
   },
+  render: args => (
+    <Stack sx={{ alignItems: 'center', gap: Spacing.lg, width: '440px' }}>
+      <Metric {...args} />
+      <Stack sx={{ flexGrow: 1, alignSelf: 'stretch', flex: 1, border: borderStyle }} />
+      <Metric {...args} category="storybook.metric.horizontal" />
+    </Stack>
+  ),
 }
 
 type Story = StoryObj<typeof Metric>
-export const Default: Story = {
+export const Standard: Story = {
+  render: args => <Metric {...args} />,
   parameters: {
     docs: {
       description: {
@@ -80,9 +97,16 @@ export const Default: Story = {
   },
 }
 
+export const Compact: Story = {
+  render: args => <Metric {...args} />,
+  args: {
+    category: 'storybook.metric.compact',
+  },
+}
+
 export const Percentage: Story = {
   args: {
-    value: 133.42,
+    value: constQ(133.42),
     valueOptions: {
       decimals: 2,
       unit: 'percentage',
@@ -96,25 +120,9 @@ export const Tooltip: Story = {
   },
 }
 
-export const LargeCenter: Story = {
-  args: {
-    size: 'large',
-    alignment: 'center',
-    change: -5,
-  },
-}
-
-export const ExtraLargeRight: Story = {
-  args: {
-    size: 'extraLarge',
-    alignment: 'end',
-    change: 5,
-  },
-}
-
 export const Loading: Story = {
   args: {
-    loading: true,
+    value: q({ data: undefined, isLoading: true, error: null }),
   },
 }
 
@@ -131,10 +139,9 @@ export const Notional: Story = {
 
 export const Notionals: Story = {
   args: {
-    value: 650450,
+    value: constQ(650450),
     valueOptions: { unit: 'dollar' },
     label: 'Collateral to recover',
-    size: 'large',
     alignment: 'center',
     notional: [
       {
@@ -181,7 +188,7 @@ export const CustomValueFontColor: Story = {
 
 export const NotAvailable: Story = {
   args: {
-    value: null,
+    value: q({ data: undefined, isLoading: false, error: null }),
     label: 'Metric with N/A Value',
   },
   parameters: {
@@ -194,15 +201,14 @@ export const NotAvailable: Story = {
   },
 }
 
-export const RightAdornment: Story = {
+export const WithIcon: Story = {
   args: {
-    size: 'large',
-    rightAdornment: <FireIcon fontSize="small" color="error" />,
+    icon: <FireIcon fontSize="small" color="error" />,
   },
   parameters: {
     docs: {
       description: {
-        story: 'Demonstrates the Metric component with a right adornment',
+        story: 'Demonstrates the Metric component with a leading icon',
       },
     },
   },
@@ -210,7 +216,7 @@ export const RightAdornment: Story = {
 
 export const ErrorWithTooltip: Story = {
   args: {
-    error: new globalThis.Error('Metric failed to load'),
+    value: q({ data: undefined, isLoading: false, error: new Error('Metric failed to load') }),
     errorTooltip: {
       title: 'Error fetching metric',
       body: 'Some positions could not be loaded correctly.',
